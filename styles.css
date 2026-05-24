@@ -2859,6 +2859,541 @@ body {
   }
 }
 
+/* Phase 1 RPG shell: mobile-first game viewport */
+body {
+  overflow-x: hidden;
+}
+
+.game-shell {
+  min-height: 100dvh;
+  padding: 10px 10px 96px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 240, 199, 0.9), transparent 34%),
+    linear-gradient(180deg, #cdefff 0%, #fff7e6 42%, #f7dfb9 100%);
+}
+
+.topbar {
+  position: sticky;
+  top: 8px;
+  z-index: 24;
+  width: min(1180px, 100%);
+  margin-bottom: 10px;
+  padding: 8px;
+  border: 2px solid rgba(38, 34, 31, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 253, 247, 0.78);
+  box-shadow: 0 12px 28px rgba(38, 34, 31, 0.12);
+  backdrop-filter: blur(14px);
+}
+
+.brand h1 {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.1rem;
+}
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+}
+
+.player-card {
+  display: none;
+}
+
+.campus-wrap {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 1180px;
+}
+
+.campus-panel {
+  position: relative;
+  min-height: calc(100dvh - 118px);
+  padding: 10px;
+  overflow: hidden;
+  border-width: 4px;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 246, 226, 0.62)),
+    #fff8eb;
+}
+
+.rpg-hud {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  right: 18px;
+  z-index: 12;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 0.8fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border: 3px solid var(--ink);
+  border-radius: 20px;
+  background: rgba(255, 252, 244, 0.92);
+  box-shadow: 0 12px 0 rgba(38, 34, 31, 0.12);
+}
+
+.rpg-profile {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.rpg-avatar {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background:
+    url("assets/cartoon-avatar.webp") center 16% / 150% auto no-repeat,
+    #fff0c7;
+  box-shadow: 3px 4px 0 rgba(38, 34, 31, 0.16);
+}
+
+.rpg-profile strong,
+.rpg-profile small,
+.rpg-stats span,
+.rpg-stats small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rpg-profile strong {
+  font-size: 0.95rem;
+  font-weight: 950;
+}
+
+.rpg-profile small,
+.rpg-stats small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.rpg-stats {
+  display: grid;
+  gap: 4px;
+}
+
+.rpg-stats span {
+  color: var(--coral);
+  font-size: 0.76rem;
+  font-weight: 950;
+}
+
+.rpg-xp-track {
+  height: 12px;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: white;
+}
+
+.rpg-xp-track span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #ff8a65, #ffd166, #8ed081);
+}
+
+.hud-button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  color: #fff;
+  background: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 950;
+  box-shadow: 3px 4px 0 rgba(38, 34, 31, 0.16);
+}
+
+.mission-status,
+.xp-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.campus {
+  min-height: clamp(640px, calc(100dvh - 142px), 820px);
+  margin-top: 0;
+  border-width: 4px;
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 28%),
+    url("assets/cartoon-campus.webp") center / cover no-repeat,
+    #bfe0a7;
+  box-shadow: inset 0 0 0 6px rgba(255, 255, 255, 0.32);
+}
+
+.campus::after {
+  content: "";
+  position: absolute;
+  inset: 86px 10px 84px;
+  border: 2px solid rgba(255, 255, 255, 0.26);
+  border-radius: 26px;
+  pointer-events: none;
+}
+
+.campus-title-card,
+.quest-banner,
+.tap-prompt {
+  position: absolute;
+  z-index: 10;
+  border: 3px solid var(--ink);
+  background: rgba(255, 252, 244, 0.93);
+  box-shadow: 5px 7px 0 rgba(38, 34, 31, 0.15);
+}
+
+.campus-title-card {
+  top: 96px;
+  left: 18px;
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 16px;
+}
+
+.campus-title-card span,
+.quest-banner span {
+  color: var(--coral);
+  font-size: 0.66rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.campus-title-card strong,
+.quest-banner strong {
+  font-size: 0.95rem;
+  font-weight: 950;
+}
+
+.quest-banner {
+  left: 18px;
+  right: 18px;
+  bottom: 76px;
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 18px;
+}
+
+.quest-banner strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tap-prompt {
+  left: 50%;
+  bottom: 18px;
+  width: min(520px, calc(100% - 36px));
+  padding: 9px 12px;
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.path {
+  opacity: 0;
+}
+
+.station {
+  width: 132px;
+  min-height: 122px;
+  gap: 3px;
+  padding: 10px;
+  border-width: 3px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 240, 199, 0.92)),
+    #fff7df;
+  box-shadow: 5px 7px 0 rgba(38, 34, 31, 0.17);
+  transform-origin: 50% 100%;
+}
+
+.station::before {
+  content: "!";
+  position: absolute;
+  top: -14px;
+  right: -10px;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  color: #fff;
+  background: var(--coral);
+  font-weight: 950;
+  box-shadow: 2px 3px 0 rgba(38, 34, 31, 0.18);
+  animation: questPing 1.2s ease-in-out infinite;
+}
+
+.station.done::before {
+  content: "✓";
+  background: var(--green-dark);
+  animation: none;
+}
+
+.station.selected,
+.station.arrived,
+.station.near {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 7px 10px 0 rgba(38, 34, 31, 0.22);
+}
+
+.station-icon {
+  width: 38px;
+  height: 34px;
+  border-width: 2px;
+}
+
+.station strong {
+  font-size: 0.82rem;
+  line-height: 1.05;
+}
+
+.station small,
+.station em {
+  display: block;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.station em {
+  color: var(--coral);
+}
+
+@keyframes questPing {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -4px; }
+}
+
+.player {
+  z-index: 11;
+  filter: drop-shadow(0 10px 8px rgba(38, 34, 31, 0.22));
+}
+
+.real-avatar {
+  width: 70px;
+  height: 126px;
+}
+
+.walk-avatar {
+  width: 68px;
+  height: 120px;
+  background-size: 272px 120px;
+}
+
+@keyframes walkCycle {
+  from { background-position-x: 0; }
+  to { background-position-x: -272px; }
+}
+
+.controls {
+  position: absolute;
+  right: 18px;
+  bottom: 152px;
+  z-index: 13;
+  display: grid;
+  opacity: 0.94;
+}
+
+.controls button {
+  min-width: 52px;
+  min-height: 44px;
+  border-width: 3px;
+  border-radius: 16px;
+  background: rgba(255, 252, 244, 0.94);
+}
+
+.briefing {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px;
+  border-radius: 24px;
+}
+
+.briefing > .eyebrow,
+.briefing > h2,
+.briefing > p,
+.briefing-actions {
+  display: none;
+}
+
+.vip-pass,
+.next-best-mission,
+.influence-recap,
+.reward-wallet,
+.quest-log,
+.tier-ladder,
+.accessory-case,
+.studio-desk,
+.founder-briefing {
+  margin-top: 0;
+}
+
+.quest-log,
+.accessory-case,
+.studio-desk,
+.tier-ladder {
+  display: none;
+}
+
+.bottom-nav {
+  bottom: max(10px, env(safe-area-inset-bottom));
+  z-index: 40;
+  width: min(520px, calc(100% - 18px));
+  border-width: 3px;
+  border-radius: 22px;
+}
+
+@media (min-width: 900px) {
+  .game-shell {
+    display: grid;
+    justify-content: center;
+  }
+
+  .topbar,
+  .campus-wrap {
+    width: min(820px, calc(100vw - 28px));
+  }
+}
+
+@media (max-width: 760px) {
+  .game-shell {
+    padding: 8px 8px 90px;
+  }
+
+  .topbar {
+    gap: 8px;
+    padding: 6px;
+  }
+
+  .topbar-actions {
+    margin-left: auto;
+  }
+
+  .staff-toggle {
+    display: none;
+  }
+
+  .sound-toggle {
+    min-height: 38px;
+    padding: 0 10px;
+    font-size: 0.72rem;
+  }
+
+  .brand p {
+    font-size: 0.62rem;
+  }
+
+  .brand h1 {
+    font-size: 0.92rem;
+  }
+
+  .campus-panel {
+    min-height: calc(100dvh - 98px);
+    padding: 7px;
+    border-radius: 24px;
+  }
+
+  .rpg-hud {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    grid-template-columns: minmax(0, 1fr) 96px 48px;
+    padding: 6px;
+    border-radius: 18px;
+  }
+
+  .rpg-avatar {
+    width: 42px;
+    height: 42px;
+  }
+
+  .rpg-profile {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .hud-button {
+    min-height: 40px;
+    padding: 0 8px;
+  }
+
+  .campus {
+    min-height: calc(100dvh - 112px);
+    border-radius: 20px;
+  }
+
+  .campus-title-card {
+    top: 82px;
+    left: 12px;
+  }
+
+  .station {
+    width: 118px;
+    min-height: 110px;
+    padding: 8px;
+  }
+
+  .station-duel { top: 118px; left: 14px; }
+  .station-rank { top: 92px; left: calc(50% - 59px); right: auto; }
+  .station-price { top: 186px; right: 14px; left: auto; }
+  .station-occasion { left: 18px; bottom: 190px; }
+  .station-founder { right: 18px; bottom: 192px; }
+
+  .quest-banner {
+    bottom: 86px;
+    left: 12px;
+    right: 12px;
+  }
+
+  .tap-prompt {
+    bottom: 34px;
+    width: calc(100% - 24px);
+  }
+
+  .controls {
+    right: 14px;
+    bottom: 148px;
+  }
+
+  .controls button {
+    min-width: 46px;
+    min-height: 40px;
+    padding: 0;
+    font-size: 0.72rem;
+  }
+
+  .briefing {
+    grid-template-columns: 1fr;
+  }
+
+  .vip-pass,
+  .reward-wallet,
+  .founder-briefing {
+    display: none;
+  }
+}
+
 @media (max-width: 390px) {
   .station {
     width: 116px;

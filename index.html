@@ -40,6 +40,21 @@
 
       <main class="campus-wrap">
         <section class="campus-panel" aria-label="Playable VIP mission campus">
+          <div class="rpg-hud" aria-label="VIP status HUD">
+            <div class="rpg-profile">
+              <span class="rpg-avatar" aria-hidden="true"></span>
+              <div>
+                <strong id="hudName">Guest Creator</strong>
+                <small id="hudRank">Founding Signal Partner</small>
+              </div>
+            </div>
+            <div class="rpg-stats">
+              <span id="hudXp">0 XP</span>
+              <div class="rpg-xp-track" aria-hidden="true"><span id="hudXpFill"></span></div>
+              <small id="hudMissionCount">0/5 missions</small>
+            </div>
+            <button id="hudTour" class="hud-button" type="button">Guide</button>
+          </div>
           <div class="mission-status">
             <span id="completedCount">0/5 missions</span>
             <div class="progress-track"><span id="progressFill"></span></div>
@@ -54,6 +69,14 @@
           </div>
 
           <div id="campus" class="campus" tabindex="0" aria-label="Use arrow keys or WASD to walk to mission stations">
+            <div class="campus-title-card" aria-hidden="true">
+              <span>Sunday Staples</span>
+              <strong>VIP Campus</strong>
+            </div>
+            <div class="quest-banner">
+              <span>Current Quest</span>
+              <strong id="hudQuest">Meet Mina and choose your first mission.</strong>
+            </div>
             <div class="sky-ribbon" aria-hidden="true"></div>
             <div class="sparkle-field" aria-hidden="true">
               <span></span><span></span><span></span><span></span><span></span><span></span>
@@ -71,6 +94,7 @@
               <span class="station-icon icon-duel"><span></span></span>
               <strong>Footwear Duel</strong>
               <small>Head to head</small>
+              <em>+80 XP</em>
             </button>
 
             <button class="station station-rank" data-mission="rank" type="button">
@@ -80,6 +104,7 @@
               <span class="station-icon icon-rank"><span></span></span>
               <strong>Intent Studio</strong>
               <small>Rank purchase intent</small>
+              <em>+110 XP</em>
             </button>
 
             <button class="station station-price" data-mission="price" type="button">
@@ -91,6 +116,7 @@
               <span class="station-icon icon-price"><span></span></span>
               <strong>Price Lab</strong>
               <small>Comfortable max</small>
+              <em>+100 XP</em>
             </button>
 
             <button class="station station-occasion" data-mission="occasion" type="button">
@@ -100,6 +126,7 @@
               <span class="station-icon icon-occasion"><span></span></span>
               <strong>Occasion Plaza</strong>
               <small>Where it belongs</small>
+              <em>+90 XP</em>
             </button>
 
             <button class="station station-founder" data-mission="founder" type="button">
@@ -111,6 +138,7 @@
               <span class="station-icon icon-founder"><span></span></span>
               <strong>Founder Desk</strong>
               <small>Action call</small>
+              <em>+120 XP</em>
             </button>
 
             <div class="pond" aria-hidden="true"></div>
@@ -138,6 +166,10 @@
               <span class="player-skirt"></span>
               <span class="player-bag"></span>
               <span class="player-feet"></span>
+            </div>
+
+            <div class="tap-prompt">
+              <span id="tapPrompt">Tap a destination to walk there. Tap again to enter.</span>
             </div>
           </div>
 

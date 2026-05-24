@@ -465,6 +465,14 @@ const sundayPointsMeta = document.querySelector("#sundayPointsMeta");
 const avatarMini = document.querySelector("#avatarMini");
 const soundToggle = document.querySelector("#soundToggle");
 const campus = document.querySelector("#campus");
+const hudName = document.querySelector("#hudName");
+const hudRank = document.querySelector("#hudRank");
+const hudXp = document.querySelector("#hudXp");
+const hudXpFill = document.querySelector("#hudXpFill");
+const hudMissionCount = document.querySelector("#hudMissionCount");
+const hudQuest = document.querySelector("#hudQuest");
+const hudTour = document.querySelector("#hudTour");
+const tapPrompt = document.querySelector("#tapPrompt");
 const questLog = document.querySelector("#questLog");
 const completedCount = document.querySelector("#completedCount");
 const progressFill = document.querySelector("#progressFill");
@@ -557,6 +565,8 @@ function updatePlayerUi() {
   playerRole.textContent = state.player.role;
   playerTier.textContent = tier.name;
   sundayPointsMeta.textContent = state.player.pointsId ? "Sunday Points linked" : "Sunday Points not linked";
+  if (hudName) hudName.textContent = state.player.name;
+  if (hudRank) hudRank.textContent = tier.name;
 }
 
 function saveProgress() {
@@ -605,8 +615,11 @@ function renderProgression() {
   tierName.textContent = current.name;
   tierMeta.textContent = `${state.xp} XP earned`;
   xpFill.style.width = `${progress}%`;
+  if (hudXpFill) hudXpFill.style.width = `${progress}%`;
   nextTier.textContent = next ? `Next: ${next.name} at ${next.xp} XP` : "Top tier reached";
   playerTier.textContent = current.name;
+  if (hudXp) hudXp.textContent = `${state.xp} XP`;
+  if (hudRank) hudRank.textContent = current.name;
 
   tierLadder.innerHTML = tiers
     .map((tier) => {
@@ -641,6 +654,7 @@ function renderQuestLog() {
     .join("");
 
   completedCount.textContent = `${state.completed.size}/5 missions`;
+  if (hudMissionCount) hudMissionCount.textContent = `${state.completed.size}/5 missions`;
   progressFill.style.width = `${(state.completed.size / 5) * 100}%`;
 
   document.querySelectorAll(".station").forEach((station) => {
@@ -651,6 +665,20 @@ function renderQuestLog() {
   renderNextBestMission();
   renderInfluenceRecap();
   renderRewardWallet();
+  renderHudQuest();
+}
+
+function renderHudQuest() {
+  if (!hudQuest) return;
+  const nextId = getNextOpenMissionId();
+  if (!nextId) {
+    hudQuest.textContent = "All missions complete. Founder brief unlocked.";
+    if (tapPrompt) tapPrompt.textContent = "Return to any room to review or refine your signal.";
+    return;
+  }
+  const mission = missionData[nextId];
+  hudQuest.textContent = `${mission.title}: ${mission.customerHook}`;
+  if (tapPrompt) tapPrompt.textContent = `Next: tap ${mission.title}, walk there, then tap again to enter.`;
 }
 
 function getNextOpenMissionId() {
@@ -1195,6 +1223,7 @@ function handleStationClick(id) {
   }
 
   walkToMission(id);
+  if (tapPrompt) tapPrompt.textContent = `Walking to ${missionData[id].title}... tap again when you arrive.`;
 }
 
 function openMission(id) {
@@ -1880,6 +1909,10 @@ document.addEventListener("click", (event) => {
   if (!missionData[missionId]) return;
   handleStationClick(missionId);
 });
+
+if (hudTour) {
+  hudTour.addEventListener("click", () => openTour(0));
+}
 
 closeMission.addEventListener("click", () => {
   missionModal.classList.remove("open");
