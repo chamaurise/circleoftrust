@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sunday Staples VIP Mission Campus</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true">
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <div class="game-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark"><span>SS</span></span>
+          <div>
+            <p>Sunday Staples VIP</p>
+            <h1>Mission Campus</h1>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="staffConsoleToggle" class="staff-toggle" type="button">Staff console</button>
+          <button id="soundToggle" class="sound-toggle" type="button" aria-pressed="false">
+            Sound off
+          </button>
+        </div>
+
+        <div class="player-card" aria-live="polite">
+          <span id="avatarMini" class="avatar-mini"><span></span></span>
+          <div>
+            <strong id="playerName">Guest Creator</strong>
+            <small id="playerRole">VIP Co-Creator</small>
+            <small id="playerTier">Founding Signal Partner</small>
+            <small id="sundayPointsMeta">Sunday Points not linked</small>
+          </div>
+        </div>
+      </header>
+
+      <main class="campus-wrap">
+        <section class="campus-panel" aria-label="Playable VIP mission campus">
+          <div class="mission-status">
+            <span id="completedCount">0/5 missions</span>
+            <div class="progress-track"><span id="progressFill"></span></div>
+          </div>
+          <div class="xp-status" aria-live="polite">
+            <div>
+              <strong id="tierName">Founding Signal Partner</strong>
+              <small id="tierMeta">0 XP earned</small>
+            </div>
+            <div class="xp-track"><span id="xpFill"></span></div>
+            <small id="nextTier">Next: Trend Scout at 100 XP</small>
+          </div>
+
+          <div id="campus" class="campus" tabindex="0" aria-label="Use arrow keys or WASD to walk to mission stations">
+            <div class="sky-ribbon" aria-hidden="true"></div>
+            <div class="sparkle-field" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="path horizontal"></div>
+            <div class="path vertical"></div>
+
+            <button class="station station-duel" data-mission="duel" type="button">
+              <span class="station-scene boxing-ring" aria-hidden="true">
+                <span class="ring-rope rope-top"></span>
+                <span class="ring-rope rope-bottom"></span>
+                <span class="shoe-fighter fighter-left"></span>
+                <span class="shoe-fighter fighter-right"></span>
+              </span>
+              <span class="station-icon icon-duel"><span></span></span>
+              <strong>Footwear Duel</strong>
+              <small>Head to head</small>
+            </button>
+
+            <button class="station station-rank" data-mission="rank" type="button">
+              <span class="station-scene rank-gallery" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </span>
+              <span class="station-icon icon-rank"><span></span></span>
+              <strong>Intent Studio</strong>
+              <small>Rank purchase intent</small>
+            </button>
+
+            <button class="station station-price" data-mission="price" type="button">
+              <span class="station-scene lab-bench" aria-hidden="true">
+                <span class="flask flask-one"></span>
+                <span class="flask flask-two"></span>
+                <span class="meter"></span>
+              </span>
+              <span class="station-icon icon-price"><span></span></span>
+              <strong>Price Lab</strong>
+              <small>Comfortable max</small>
+            </button>
+
+            <button class="station station-occasion" data-mission="occasion" type="button">
+              <span class="station-scene occasion-arch" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </span>
+              <span class="station-icon icon-occasion"><span></span></span>
+              <strong>Occasion Plaza</strong>
+              <small>Where it belongs</small>
+            </button>
+
+            <button class="station station-founder" data-mission="founder" type="button">
+              <span class="station-scene founder-office" aria-hidden="true">
+                <span class="desk"></span>
+                <span class="lamp"></span>
+                <span class="memo"></span>
+              </span>
+              <span class="station-icon icon-founder"><span></span></span>
+              <strong>Founder Desk</strong>
+              <small>Action call</small>
+            </button>
+
+            <div class="pond" aria-hidden="true"></div>
+            <div class="studio-props" aria-hidden="true">
+              <span class="prop-board"></span>
+              <span class="prop-bench"></span>
+              <span class="prop-lamp"></span>
+            </div>
+            <div class="trees" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+
+            <div id="player" class="player" aria-hidden="true">
+              <img class="real-avatar" src="assets/cartoon-avatar.webp" alt="" />
+              <span class="walk-avatar"></span>
+              <span class="player-shadow"></span>
+              <span class="player-aura"></span>
+              <span class="player-hair"></span>
+              <span class="player-head"></span>
+              <span class="player-face"></span>
+              <span class="player-scarf"></span>
+              <span class="player-arm arm-left"></span>
+              <span class="player-arm arm-right"></span>
+              <span class="player-body"></span>
+              <span class="player-skirt"></span>
+              <span class="player-bag"></span>
+              <span class="player-feet"></span>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button data-move="up" type="button">Up</button>
+            <div>
+              <button data-move="left" type="button">Left</button>
+              <button data-move="down" type="button">Down</button>
+              <button data-move="right" type="button">Right</button>
+            </div>
+          </div>
+        </section>
+
+        <aside class="briefing">
+          <p class="eyebrow">VIP game loop</p>
+          <h2>Walk to a studio, complete the mission, unlock the next signal.</h2>
+          <p>
+            Each playful station maps cleanly to future survey data: comparison,
+            ranking, price sensitivity, occasion fit, and founder action.
+          </p>
+          <div class="briefing-actions">
+            <button id="startTour" type="button">Replay VIP walkthrough</button>
+            <button id="focusLadder" type="button">View career ladder</button>
+          </div>
+
+          <div class="vip-pass">
+            <span>Private invitation</span>
+            <strong>Shape what gets sampled, priced, and launched next.</strong>
+            <p>
+              Your answers are not generic survey data. They become founder-ready
+              product signals tied to your Sunday Points profile.
+            </p>
+          </div>
+
+          <div class="next-best-mission">
+            <h3>Recommended Next Move</h3>
+            <div id="nextBestMission"></div>
+          </div>
+
+          <div class="influence-recap">
+            <h3>Your Influence</h3>
+            <div id="influenceRecap"></div>
+          </div>
+
+          <div class="reward-wallet">
+            <h3>VIP Perks</h3>
+            <div id="rewardWallet"></div>
+          </div>
+
+          <div class="quest-log">
+            <h3>Mission Log</h3>
+            <ul id="questLog"></ul>
+          </div>
+
+          <div class="accessory-case">
+            <h3>Unlocked Accessories</h3>
+            <div id="accessoryCase" class="accessory-grid"></div>
+          </div>
+
+          <div class="studio-desk">
+            <h3>Your Studio Desk</h3>
+            <div id="studioDesk" class="desk-scene" aria-label="Studio desk collectibles"></div>
+          </div>
+
+          <div class="founder-briefing">
+            <h3>Founder Briefing</h3>
+            <div id="founderBriefing" class="briefing-card"></div>
+            <button id="exportSignals" type="button">Export local signals</button>
+          </div>
+
+          <div class="tier-ladder">
+            <h3>VIP Tier Ladder</h3>
+            <ol id="tierLadder"></ol>
+          </div>
+        </aside>
+      </main>
+
+      <nav class="bottom-nav" aria-label="Participant sections">
+        <button class="active" type="button" data-view-target="missions">
+          <span class="nav-icon nav-missions" aria-hidden="true"></span>
+          <span>Missions</span>
+        </button>
+        <button type="button" data-view-target="profile">
+          <span class="nav-icon nav-profile" aria-hidden="true"></span>
+          <span>Profile</span>
+        </button>
+        <button type="button" data-view-target="ladder">
+          <span class="nav-icon nav-ladder" aria-hidden="true"></span>
+          <span>Ladder</span>
+        </button>
+        <button type="button" data-view-target="briefing">
+          <span class="nav-icon nav-briefing" aria-hidden="true"></span>
+          <span>Briefing</span>
+        </button>
+        <button type="button" data-view-target="settings">
+          <span class="nav-icon nav-settings" aria-hidden="true"></span>
+          <span>Settings</span>
+        </button>
+      </nav>
+    </div>
+
+    <section id="staffConsole" class="staff-console" aria-label="Sunday Staples staff console" hidden>
+      <header class="staff-header">
+        <div>
+          <p class="eyebrow">Sunday Staples internal</p>
+          <h2>VIP Signal Console</h2>
+          <span>Review co-creation missions, identify product signals, and prepare founder-ready actions.</span>
+        </div>
+        <div class="staff-header-actions">
+          <button id="staffExport" type="button">Export report</button>
+          <button id="backToCampus" type="button">Back to campus</button>
+        </div>
+      </header>
+
+      <div id="staffKpis" class="staff-kpis"></div>
+
+      <section class="staff-workspace">
+        <aside class="staff-panel staff-filters">
+          <h3>Controls</h3>
+          <label>
+            Search participant
+            <input id="staffSearch" type="search" placeholder="Name, role, tier, signal..." />
+          </label>
+          <label>
+            Mission
+            <select id="staffMissionFilter">
+              <option value="all">All missions</option>
+              <option value="duel">Footwear Duel</option>
+              <option value="rank">Intent Studio</option>
+              <option value="price">Price Lab</option>
+              <option value="occasion">Occasion Plaza</option>
+              <option value="founder">Founder Desk</option>
+            </select>
+          </label>
+          <label>
+            Segment
+            <select id="staffSegmentFilter">
+              <option value="all">All segments</option>
+              <option value="Paying Customer">Paying Customer</option>
+              <option value="KOL Collaborator">KOL Collaborator</option>
+            </select>
+          </label>
+          <div class="staff-note">
+            <strong>Operating rule</strong>
+            <span>Use signals directionally until sample size and respondent quality checks are live.</span>
+          </div>
+        </aside>
+
+        <main class="staff-main">
+          <section class="staff-panel">
+            <div class="staff-section-title">
+              <div>
+                <h3>Campaign waves</h3>
+                <p>Plan research around launches, VIP cohorts, and marketing moments.</p>
+              </div>
+            </div>
+            <div id="campaignWaves" class="campaign-waves"></div>
+          </section>
+
+          <section class="staff-panel">
+            <div class="staff-section-title">
+              <div>
+                <h3>Founder-ready signals</h3>
+                <p>Highest-signal reads staff can act on this week.</p>
+              </div>
+            </div>
+            <div id="staffInsights" class="staff-insights"></div>
+          </section>
+
+          <section class="staff-grid">
+            <div class="staff-panel">
+              <div class="staff-section-title">
+                <div>
+                  <h3>Participants</h3>
+                  <p>VIP customers and KOLs with mission progress.</p>
+                </div>
+              </div>
+              <div id="staffTable" class="staff-table"></div>
+            </div>
+
+            <aside class="staff-panel staff-detail">
+              <div class="staff-section-title">
+                <div>
+                  <h3>Selected profile</h3>
+                  <p>Mission history and usable research notes.</p>
+                </div>
+              </div>
+              <div id="staffDetail"></div>
+            </aside>
+          </section>
+        </main>
+      </section>
+    </section>
+
+    <div id="creatorModal" class="modal open" role="dialog" aria-modal="true" aria-labelledby="creatorTitle">
+      <div class="modal-card creator-card">
+        <div>
+          <p class="eyebrow">Welcome to campus</p>
+          <h2 id="creatorTitle">Create your VIP co-creator</h2>
+          <p>Link your Sunday Points, unlock your private research pass, and help decide what Sunday Staples builds next.</p>
+        </div>
+        <form id="creatorForm" class="creator-form">
+          <section class="onboarding-section">
+            <span class="form-step">1</span>
+            <div>
+              <h3>Link Sunday Points</h3>
+              <p>Your mission status, perks, and research influence sit beside your loyalty profile.</p>
+            </div>
+            <label for="nameInput">Display name</label>
+            <input id="nameInput" name="name" value="Amira" maxlength="18" />
+            <label for="pointsInput">Sunday Points ID or email</label>
+            <input id="pointsInput" name="pointsId" value="amira@sundaystaples.co" maxlength="48" />
+          </section>
+
+          <section class="onboarding-section">
+            <span class="form-step">2</span>
+            <div>
+              <h3>Tell us more about yourself</h3>
+              <p>These answers help us weight your product signals by real customer context.</p>
+            </div>
+            <fieldset>
+              <legend>VIP role</legend>
+              <div class="role-options">
+                <label><input type="radio" name="role" value="Paying Customer" checked />Paying Customer</label>
+                <label><input type="radio" name="role" value="KOL Collaborator" />KOL Collaborator</label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Style priority</legend>
+              <div class="role-options">
+                <label><input type="radio" name="stylePriority" value="Comfort first" checked />Comfort first</label>
+                <label><input type="radio" name="stylePriority" value="Polished versatility" />Polished versatility</label>
+                <label><input type="radio" name="stylePriority" value="Statement details" />Statement details</label>
+              </div>
+            </fieldset>
+            <label for="occasionInput">Most common shoe occasion</label>
+            <select id="occasionInput" name="occasion">
+              <option>Work and client meetings</option>
+              <option>Weekend brunch</option>
+              <option>Travel and long walking days</option>
+              <option>Events and dinners</option>
+            </select>
+          </section>
+
+          <section class="onboarding-section">
+            <span class="form-step">3</span>
+            <div>
+              <h3>Choose a studio look</h3>
+              <p>Your character carries your rank, perks, and mission history through the VIP map.</p>
+            </div>
+            <fieldset>
+              <legend>Studio look</legend>
+              <div class="swatches">
+                <label><input type="radio" name="color" value="coral" checked /><span class="coral"></span>Coral</label>
+                <label><input type="radio" name="color" value="sage" /><span class="sage"></span>Sage</label>
+                <label><input type="radio" name="color" value="ink" /><span class="ink"></span>Ink</label>
+                <label><input type="radio" name="color" value="lilac" /><span class="lilac"></span>Lilac</label>
+                <label><input type="radio" name="color" value="denim" /><span class="denim"></span>Denim</label>
+                <label><input type="radio" name="color" value="butter" /><span class="butter"></span>Butter</label>
+              </div>
+            </fieldset>
+          </section>
+
+          <button type="submit">Link account and enter campus</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="tourModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+      <div class="modal-card tour-card">
+        <button id="closeTour" class="icon-button" type="button" aria-label="Close walkthrough">Close</button>
+        <p class="eyebrow" id="tourStep">VIP walkthrough</p>
+        <h2 id="tourTitle">Welcome to your mission campus</h2>
+        <p id="tourBody"></p>
+        <div id="tourDestinations" class="tour-destinations"></div>
+        <div class="tour-actions">
+          <button id="tourBack" type="button">Back</button>
+          <button id="tourNext" type="button">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="missionModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="missionTitle">
+      <div class="modal-card mission-card">
+        <button id="closeMission" class="icon-button" type="button" aria-label="Close mission">Close</button>
+        <div class="guide">
+          <span class="guide-avatar" aria-hidden="true"></span>
+          <div>
+            <strong>Mina, Studio Guide</strong>
+            <p id="guideLine">Let’s turn your taste into a clear signal.</p>
+          </div>
+        </div>
+        <p id="missionType" class="eyebrow">Mission</p>
+        <h2 id="missionTitle">Mission</h2>
+        <p id="missionIntro"></p>
+        <div id="missionContent" class="mission-content"></div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="celebration" class="celebration" aria-hidden="true"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
