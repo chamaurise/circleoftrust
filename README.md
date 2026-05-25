@@ -1,28 +1,25 @@
-# Circle of Trust
+# Circle of Trust Phaser Rebuild
 
-Circle of Trust is the Sunday Staples VIP mission campus: a static customer-facing prototype for gamified product co-creation, VIP status progression, and market research missions.
+This is the Phaser-based rebuild of the Sunday Staples VIP game experience.
 
-## Deploy On Vercel
+It is intentionally static and Vercel-safe. There is no local Node server and no `npm start`.
 
-This repository is intentionally static-only.
+## Deploy
 
-Use these Vercel settings:
+Use Vercel settings:
 
 - Framework Preset: `Other`
-- Build Command: leave blank
-- Output Directory: leave blank
-- Install Command: leave blank
+- Build Command: blank
+- Output Directory: blank
+- Install Command: blank
 
-The repo should not include a Node server or `npm start` command.
+## Current Scope
 
-## Files
-
-- `index.html`
-- `styles.css`
-- `app.js`
-- `assets/`
-- `vercel.json`
-
-## Local Preview
-
-Open `index.html` directly in a browser, or use any static file server.
+- Start/passport scene
+- Mobile-first campus scene
+- Tap-to-walk avatar
+- Mina dialogue
+- Mission pins
+- Mission preview card
+- Lightweight mission room/result scenes
+- Local progress storage
