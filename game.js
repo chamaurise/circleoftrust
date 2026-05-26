@@ -1,5 +1,6 @@
 const GAME_WIDTH = 390;
-const GAME_HEIGHT = 780;
+const GAME_HEIGHT = 844;
+const CAMPUS_WORLD_WIDTH = 760;
 const STORAGE_KEY = "circleOfTrustPhaserProgress";
 
 const missions = [
@@ -10,8 +11,8 @@ const missions = [
     xp: 80,
     time: "2 min",
     color: 0xd77458,
-    x: 100,
-    y: 218,
+    x: 110,
+    y: 238,
     room: "Boxing Ring",
     prompt: "Which shoe deserves to win the next sample bout?"
   },
@@ -22,8 +23,8 @@ const missions = [
     xp: 110,
     time: "90 sec",
     color: 0x77a7c7,
-    x: 284,
-    y: 204,
+    x: 328,
+    y: 206,
     room: "Atelier",
     prompt: "Stack the concepts by strongest purchase intent."
   },
@@ -34,7 +35,7 @@ const missions = [
     xp: 100,
     time: "2 min",
     color: 0xb99adf,
-    x: 286,
+    x: 548,
     y: 350,
     room: "Laboratory",
     prompt: "Find the highest comfortable buying price."
@@ -46,8 +47,8 @@ const missions = [
     xp: 90,
     time: "90 sec",
     color: 0x72927d,
-    x: 104,
-    y: 452,
+    x: 212,
+    y: 506,
     room: "Styling Plaza",
     prompt: "Match each shoe to the moment where it belongs."
   },
@@ -58,8 +59,8 @@ const missions = [
     xp: 120,
     time: "1 min",
     color: 0xe5bc58,
-    x: 288,
-    y: 500,
+    x: 650,
+    y: 548,
     room: "Private Office",
     prompt: "Choose what the founder should do next."
   }
@@ -123,6 +124,62 @@ function text(scene, x, y, value, size = 18, color = "#26221f", extra = {}) {
   }).setResolution(2);
 }
 
+function glassPolygon(scene, points, fill = 0xfffbf2, alpha = 0.82, stroke = 0xffffff) {
+  const g = scene.add.graphics();
+  g.fillStyle(fill, alpha);
+  g.lineStyle(1.2, stroke, 0.76);
+  g.fillPoints(points, true);
+  g.strokePoints(points, true);
+  return g;
+}
+
+function ticketPanel(scene, x, y, width, height, fill = 0xfff0c7) {
+  const notch = 16;
+  return glassPolygon(scene, [
+    new Phaser.Geom.Point(x + 18, y),
+    new Phaser.Geom.Point(x + width - 18, y),
+    new Phaser.Geom.Point(x + width, y + notch),
+    new Phaser.Geom.Point(x + width - 10, y + height / 2),
+    new Phaser.Geom.Point(x + width, y + height - notch),
+    new Phaser.Geom.Point(x + width - 18, y + height),
+    new Phaser.Geom.Point(x + 18, y + height),
+    new Phaser.Geom.Point(x, y + height - notch),
+    new Phaser.Geom.Point(x + 10, y + height / 2),
+    new Phaser.Geom.Point(x, y + notch)
+  ], fill, 0.86);
+}
+
+function mangaPanel(scene, x, y, width, height, options = {}) {
+  const skew = options.skew || 0;
+  const tail = options.tail || null;
+  const points = [
+    new Phaser.Geom.Point(x + skew, y),
+    new Phaser.Geom.Point(x + width, y + Math.max(0, -skew)),
+    new Phaser.Geom.Point(x + width - skew, y + height),
+    new Phaser.Geom.Point(x, y + height + Math.min(0, skew))
+  ];
+  if (tail === "left") {
+    points.splice(3, 0, new Phaser.Geom.Point(x + 46, y + height + 22), new Phaser.Geom.Point(x + 70, y + height));
+  }
+  const g = scene.add.graphics();
+  g.fillStyle(options.fill || 0xfffbf2, options.alpha || 0.9);
+  g.lineStyle(options.strokeWidth || 3, 0x26221f, 0.88);
+  g.fillPoints(points, true);
+  g.strokePoints(points, true);
+  return g;
+}
+
+function screenTone(scene, x, y, width, height, color = 0x26221f, alpha = 0.12) {
+  const dots = scene.add.graphics();
+  dots.fillStyle(color, alpha);
+  for (let dotY = y; dotY < y + height; dotY += 12) {
+    for (let dotX = x + ((dotY / 12) % 2) * 6; dotX < x + width; dotX += 12) {
+      dots.fillCircle(dotX, dotY, 1.4);
+    }
+  }
+  return dots;
+}
+
 class BootScene extends Phaser.Scene {
   constructor() {
     super("BootScene");
@@ -130,8 +187,13 @@ class BootScene extends Phaser.Scene {
 
   preload() {
     this.load.image("campus", "assets/cartoon-campus.webp");
+    this.load.image("library", "assets/library-opening.png");
     this.load.image("avatar", "assets/cartoon-avatar.webp");
     this.load.image("walk", "assets/cartoon-walk.webp");
+    this.load.image("walkFrame", "assets/walk-frame.webp");
+    this.load.image("avatarCloseup", "assets/avatar-closeup.webp");
+    this.load.image("minaConfident", "assets/mina-confident-closeup.png");
+    this.load.image("minaDialogue", "assets/mina-confident-dialogue.png");
   }
 
   create() {
@@ -159,25 +221,42 @@ class StartScene extends Phaser.Scene {
 
     panel(this, 44, 318, width - 88, 116, 22, 0xfff0c7);
     this.add.image(92, 376, "avatar").setDisplaySize(72, 112).setOrigin(0.5, 0.65);
-    text(this, 140, 342, "Circle Pass", 23, "#26221f", { weight: "900" });
-    text(this, 140, 374, "VIP campus access ready", 14, "#6f655c", { weight: "900" });
+    text(this, 140, 340, "Circle Pass", 23, "#26221f", { weight: "900" });
+    text(this, 140, 372, "Your VIP campus pass is ready. Mina will guide you inside.", 11, "#6f655c", {
+      weight: "900",
+      wordWrap: { width: width - 220 }
+    });
     pill(this, width - 116, 390, 58, 32, 0xd77458);
     text(this, width - 101, 397, "Lv. 01", 13, "#ffffff", { weight: "900" });
 
+    const comicFlow = this.add.graphics();
+    comicFlow.lineStyle(2, 0xd77458, 0.38);
+    comicFlow.lineBetween(92, 434, 92, 458);
+    comicFlow.fillStyle(0xd77458, 0.48);
+    comicFlow.fillCircle(92, 446, 4);
+
     panel(this, 44, 458, width - 88, 134, 22, 0xfff0c7);
-    this.add.image(82, 528, "avatar").setDisplaySize(48, 78).setOrigin(0.5, 0.68);
-    text(
-      this,
-      116,
-      480,
-      "Walk the campus and complete the design missions to earn status points. Collect Sunday Staples gift cards and even Krisflyer miles from our monthly lucky draws!",
-      12,
-      "#26221f",
-      {
+    const portraitBg = this.add.graphics();
+    portraitBg.fillStyle(0xffffff, 0.62);
+    portraitBg.fillCircle(82, 524, 42);
+    portraitBg.lineStyle(1.2, 0xffffff, 0.9);
+    portraitBg.strokeCircle(82, 524, 42);
+    const minaDialogue = this.add.image(82, 526, "minaDialogue").setOrigin(0.5, 0.58);
+    minaDialogue.setScale(88 / minaDialogue.width);
+    this.add.circle(114, 508, 4, 0xfffbf2, 0.92);
+    this.add.circle(124, 500, 3, 0xfffbf2, 0.82);
+    [
+      "Walk the campus",
+      "Complete design missions",
+      "Earn status points",
+      "Win Sunday Staples Gift cards & more"
+    ].forEach((item, index) => {
+      this.add.circle(128, 486 + index * 20, 3, 0xd77458, 0.95);
+      text(this, 138, 479 + index * 20, item, 10, "#26221f", {
         weight: "900",
-        wordWrap: { width: width - 172 }
-      }
-    );
+        wordWrap: { width: width - 190 }
+      });
+    });
 
     const button = panel(this, 44, height - 122, width - 88, 58, 18, 0xd77458);
     text(this, width / 2, height - 104, "Tap to enter campus", 18, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0);
@@ -446,6 +525,229 @@ class ResultScene extends Phaser.Scene {
   }
 }
 
+StartScene.prototype.create = function create() {
+  const { width, height } = this.scale;
+  this.add.rectangle(width / 2, height / 2, width, height, 0xcdefff);
+  this.add.image(width / 2, height / 2, "campus").setDisplaySize(width * 1.28, height).setAlpha(0.82);
+
+  const veil = this.add.graphics();
+  veil.fillGradientStyle(0xfff8eb, 0xfff8eb, 0xcdefff, 0xcdefff, 0.74, 0.38, 0.1, 0.34);
+  veil.fillRect(0, 0, width, height);
+
+  this.add.circle(width - 58, 104, 76, 0xfff0c7, 0.52);
+  this.add.circle(42, 590, 48, 0xd77458, 0.16);
+  this.add.circle(width - 34, 528, 36, 0x77a7c7, 0.18);
+
+  glassPolygon(this, [
+    new Phaser.Geom.Point(22, 56),
+    new Phaser.Geom.Point(width - 34, 42),
+    new Phaser.Geom.Point(width - 18, 284),
+    new Phaser.Geom.Point(36, 306)
+  ], 0xfffbf2, 0.76).setDepth(2);
+
+  text(this, 44, 88, "SUNDAY STAPLES VIP RPG", 11, "#d77458", { weight: "900" }).setDepth(3);
+  text(this, 42, 120, "Circle of\nTrust", 48, "#26221f", { weight: "900" }).setDepth(3);
+  text(this, 44, 238, "Step into the VIP Campus with Mina. Your choices become design signals for what gets sampled next.", 14, "#6f655c", {
+    weight: "900",
+    wordWrap: { width: width - 88 }
+  }).setDepth(3);
+
+  ticketPanel(this, 38, 330, width - 76, 118, 0xfff0c7).setDepth(4);
+  this.add.circle(94, 390, 42, 0xffffff, 0.58).setDepth(5);
+  this.add.image(94, 394, "avatar").setDisplaySize(64, 102).setOrigin(0.5, 0.66).setDepth(6);
+  text(this, 146, 356, "Circle Pass", 23, "#26221f", { weight: "900" }).setDepth(6);
+  text(this, 146, 388, "VIP access ready. Mina opens the campus.", 11, "#6f655c", {
+    weight: "900",
+    wordWrap: { width: width - 216 }
+  }).setDepth(6);
+  pill(this, width - 114, 396, 58, 30, 0xd77458).setDepth(6);
+  text(this, width - 99, 402, "Lv. 01", 12, "#ffffff", { weight: "900" }).setDepth(7);
+
+  const beam = this.add.graphics().setDepth(4);
+  beam.lineStyle(2, 0xd77458, 0.42);
+  beam.lineBetween(98, 448, 98, 474);
+  beam.fillStyle(0xd77458, 0.58);
+  beam.fillCircle(98, 462, 4);
+
+  glassPolygon(this, [
+    new Phaser.Geom.Point(46, 480),
+    new Phaser.Geom.Point(width - 42, 466),
+    new Phaser.Geom.Point(width - 28, 596),
+    new Phaser.Geom.Point(42, 612),
+    new Phaser.Geom.Point(54, 544)
+  ], 0xfff0c7, 0.88).setDepth(4);
+  this.add.circle(88, 540, 46, 0xffffff, 0.6).setDepth(5);
+  const minaDialogue = this.add.image(84, 540, "minaDialogue").setOrigin(0.5, 0.58).setDepth(6);
+  minaDialogue.setScale(88 / minaDialogue.width);
+
+  [
+    "Walk the campus",
+    "Complete design missions",
+    "Earn status points",
+    "Win Sunday Staples Gift cards & more"
+  ].forEach((item, index) => {
+    this.add.circle(130, 502 + index * 22, 3, 0xd77458, 0.95).setDepth(6);
+    text(this, 140, 494 + index * 22, item, 10, "#26221f", {
+      weight: "900",
+      wordWrap: { width: width - 188 }
+    }).setDepth(6);
+  });
+
+  const startBg = glassPolygon(this, [
+    new Phaser.Geom.Point(48, height - 126),
+    new Phaser.Geom.Point(width - 58, height - 138),
+    new Phaser.Geom.Point(width - 38, height - 78),
+    new Phaser.Geom.Point(58, height - 64),
+    new Phaser.Geom.Point(38, height - 98)
+  ], 0xd77458, 0.94).setDepth(8);
+  text(this, width / 2, height - 111, "Enter VIP Campus", 18, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(9);
+  startBg.setInteractive(new Phaser.Geom.Polygon([48, height - 126, width - 58, height - 138, width - 38, height - 78, 58, height - 64, 38, height - 98]), Phaser.Geom.Polygon.Contains);
+  startBg.on("pointerdown", () => this.scene.start("CampusScene"));
+
+  this.tweens.add({ targets: startBg, alpha: 0.86, yoyo: true, repeat: -1, duration: 900, ease: "Sine.inOut" });
+};
+
+StartScene.prototype.create = function createMangaOpening() {
+  const { width, height } = this.scale;
+  this.add.image(width / 2, height / 2, "library").setDisplaySize(width, height);
+
+  const shade = this.add.graphics();
+  shade.fillGradientStyle(0xfff8eb, 0xfff8eb, 0x26221f, 0x26221f, 0.44, 0.26, 0.16, 0.34);
+  shade.fillRect(0, 0, width, height);
+  screenTone(this, 0, 0, width, height, 0x26221f, 0.07);
+
+  mangaPanel(this, 24, 52, width - 48, 238, { skew: -10, fill: 0xfffbf2, alpha: 0.88, strokeWidth: 3.2 }).setDepth(2);
+  screenTone(this, width - 126, 72, 82, 82, 0xd77458, 0.16).setDepth(3);
+  text(this, 44, 88, "SUNDAY STAPLES VIP ARCHIVES", 10, "#d77458", { weight: "900" }).setDepth(4);
+  text(this, 42, 124, "Inner\nCircle", 46, "#26221f", { weight: "900" }).setDepth(4);
+  text(this, 44, 236, "Enter the archive with Mina. Your taste shapes what Sunday Staples designs next.", 12, "#6f655c", {
+    weight: "900",
+    wordWrap: { width: width - 96 }
+  }).setDepth(4);
+
+  mangaPanel(this, 38, 324, width - 76, 116, { skew: 8, fill: 0xfff0c7, alpha: 0.92, strokeWidth: 2.8 }).setDepth(5);
+  this.add.circle(92, 386, 40, 0xffffff, 0.72).setDepth(6);
+  this.add.image(92, 390, "avatar").setDisplaySize(62, 100).setOrigin(0.5, 0.66).setDepth(7);
+  text(this, 146, 354, "Circle Pass", 22, "#26221f", { weight: "900" }).setDepth(7);
+  text(this, 146, 385, "VIP access ready. Mina opens the archive.", 10, "#6f655c", {
+    weight: "900",
+    wordWrap: { width: width - 226 }
+  }).setDepth(7);
+  pill(this, width - 114, 394, 58, 30, 0xd77458).setDepth(7);
+  text(this, width - 99, 400, "Lv. 01", 12, "#ffffff", { weight: "900" }).setDepth(8);
+
+  const flow = this.add.graphics().setDepth(5);
+  flow.lineStyle(3, 0x26221f, 0.72);
+  flow.lineBetween(94, 440, 94, 466);
+  flow.fillStyle(0xfffbf2, 0.96);
+  flow.fillCircle(94, 454, 5);
+  flow.lineStyle(1.2, 0xd77458, 0.8);
+  flow.strokeCircle(94, 454, 5);
+
+  mangaPanel(this, 42, 474, width - 82, 128, { skew: -7, fill: 0xfffbf2, alpha: 0.92, strokeWidth: 2.8, tail: "left" }).setDepth(5);
+  this.add.circle(86, 538, 44, 0xfff0c7, 0.82).setDepth(6);
+  const minaDialogue = this.add.image(82, 540, "minaDialogue").setOrigin(0.5, 0.58).setDepth(7);
+  minaDialogue.setScale(86 / minaDialogue.width);
+  screenTone(this, 106, 492, 220, 82, 0xd77458, 0.09).setDepth(6);
+
+  [
+    "Walk the campus",
+    "Complete design missions",
+    "Earn status points",
+    "Win gift cards, vouchers & more",
+    "Unlock bonus founder content"
+  ].forEach((item, index) => {
+    this.add.circle(128, 494 + index * 19, 2.7, 0xd77458, 0.95).setDepth(7);
+    text(this, 138, 488 + index * 19, item, 8, "#26221f", {
+      weight: "900",
+      wordWrap: { width: width - 196 }
+    }).setDepth(7);
+  });
+
+  const start = mangaPanel(this, 40, height - 132, width - 80, 60, { skew: 8, fill: 0xd77458, alpha: 0.96, strokeWidth: 3 }).setDepth(9);
+  screenTone(this, 48, height - 124, width - 96, 46, 0xffffff, 0.13).setDepth(10);
+  text(this, width / 2, height - 114, "Enter VIP Archive", 18, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(11);
+  start.setInteractive(new Phaser.Geom.Rectangle(40, height - 132, width - 80, 60), Phaser.Geom.Rectangle.Contains);
+  start.on("pointerdown", () => this.scene.start("CampusScene"));
+  this.tweens.add({ targets: start, alpha: 0.86, yoyo: true, repeat: -1, duration: 860, ease: "Sine.inOut" });
+};
+
+CampusScene.prototype.create = function create() {
+  this.progress = loadProgress();
+  this.selectedMission = null;
+  this.target = null;
+  this.worldWidth = CAMPUS_WORLD_WIDTH;
+  this.dragStart = null;
+  this.isDraggingMap = false;
+
+  const { width, height } = this.scale;
+  this.cameras.main.setBounds(0, 0, this.worldWidth, height);
+  this.cameras.main.setScroll(0, 0);
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("view") === "right") this.cameras.main.setScroll(this.worldWidth - width, 0);
+
+  this.add.rectangle(this.worldWidth / 2, height / 2, this.worldWidth, height, 0xbfe0a7);
+  this.add.image(this.worldWidth / 2, height / 2 - 8, "campus").setDisplaySize(this.worldWidth, height * 0.92).setAlpha(0.96);
+
+  this.createHud();
+  this.createQuest();
+  this.createMissionPins();
+  this.createPlayer();
+  this.createMina();
+  this.createPreview();
+  this.createBottomMenu();
+  this.createControls();
+  this.pinHudToCamera();
+
+  this.input.on("pointerdown", (pointer, objects) => {
+    if (objects.length) return;
+    if (!this.isMapTouch(pointer)) return;
+    this.dragStart = {
+      x: pointer.x,
+      y: pointer.y,
+      cameraX: this.cameras.main.scrollX
+    };
+    this.isDraggingMap = false;
+  });
+
+  this.input.on("pointermove", (pointer) => {
+    if (!this.dragStart || !pointer.isDown) return;
+    const dx = pointer.x - this.dragStart.x;
+    if (Math.abs(dx) < 6) return;
+    this.isDraggingMap = true;
+    this.cameras.main.scrollX = Phaser.Math.Clamp(this.dragStart.cameraX - dx, 0, this.worldWidth - width);
+  });
+
+  this.input.on("pointerup", (pointer, objects) => {
+    if (!this.dragStart) return;
+    const moved = Phaser.Math.Distance.Between(pointer.x, pointer.y, this.dragStart.x, this.dragStart.y);
+    const shouldWalk = !this.isDraggingMap && moved < 10 && this.isMapTouch(pointer) && !objects.length;
+    this.dragStart = null;
+    this.isDraggingMap = false;
+    if (!shouldWalk) return;
+    this.moveTo(pointer.worldX, pointer.worldY);
+    this.hidePreview();
+    this.say("Drag the campus to explore. Tap a mission room and I will walk you there.");
+  });
+
+  this.say("Drag the campus to explore. Tap any mission room and I will walk you there.");
+};
+
+CampusScene.prototype.isMapTouch = function isMapTouch(pointer) {
+  return pointer.y >= 150 && pointer.y <= this.scale.height - 178;
+};
+
+CampusScene.prototype.pinHudToCamera = function pinHudToCamera() {
+  this.children.each((child) => {
+    if (child.depth >= 28 && child.setScrollFactor) child.setScrollFactor(0);
+  });
+};
+
+CampusScene.prototype.createPlayer = function createPlayer() {
+  this.player = this.add.image(112, 630, "avatar").setDisplaySize(54, 98).setDepth(20);
+  this.playerShadow = this.add.ellipse(112, 680, 52, 15, 0x26221f, 0.18).setDepth(19);
+};
+
 CampusScene.prototype.createControls = function createControls() {
   this.tapHint = null;
 };
@@ -533,11 +835,12 @@ CampusScene.prototype.createBottomMenu = function createBottomMenu() {
 
 CampusScene.prototype.moveTo = function moveTo(x, y, onComplete) {
   this.tweens.killTweensOf([this.player, this.playerShadow]);
-  const clampedX = Phaser.Math.Clamp(x, 34, this.scale.width - 34);
+  const clampedX = Phaser.Math.Clamp(x, 34, this.worldWidth - 34);
   const clampedY = Phaser.Math.Clamp(y, 120, this.scale.height - 190);
   const shadowY = clampedY + 50;
   const duration = Phaser.Math.Distance.Between(this.player.x, this.player.y, clampedX, clampedY) * 4.3;
   const safeDuration = Phaser.Math.Clamp(duration, 220, 1200);
+  const targetScrollX = Phaser.Math.Clamp(clampedX - this.scale.width / 2, 0, this.worldWidth - this.scale.width);
   this.tweens.add({
     targets: this.player,
     x: clampedX,
@@ -550,6 +853,12 @@ CampusScene.prototype.moveTo = function moveTo(x, y, onComplete) {
     targets: this.playerShadow,
     x: clampedX,
     y: shadowY,
+    duration: safeDuration,
+    ease: "Sine.easeInOut"
+  });
+  this.tweens.add({
+    targets: this.cameras.main,
+    scrollX: targetScrollX,
     duration: safeDuration,
     ease: "Sine.easeInOut"
   });
