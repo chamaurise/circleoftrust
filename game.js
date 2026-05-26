@@ -198,6 +198,10 @@ class BootScene extends Phaser.Scene {
 
   create() {
     const params = new URLSearchParams(window.location.search);
+    if (params.get("scene") === "duel") {
+      this.scene.start("MissionScene", { mission: missions.find((mission) => mission.id === "duel") });
+      return;
+    }
     this.scene.start(params.get("scene") === "campus" ? "CampusScene" : "StartScene");
   }
 }
@@ -453,17 +457,62 @@ class MissionScene extends Phaser.Scene {
   drawMiniGame() {
     const y = 292;
     if (this.mission.id === "duel") {
-      text(this, 52, y, "Tap the contender with stronger purchase pull.", 14, "#26221f", { weight: "900" });
-      [88, 260].forEach((x, index) => {
-        panel(this, x - 58, y + 54, 116, 140, 18, index ? 0xfff0c7 : 0xffffff);
-        this.add.ellipse(x, y + 132, 76, 36, index ? 0x72927d : 0xd77458).setStrokeStyle(3, 0x26221f);
-        text(this, x, y + 204, index ? "Founder Loafer" : "Cloudstep Mary Jane", 12, "#26221f", {
+      text(this, 52, y - 8, "Tap the shoe with stronger purchase pull.", 13, "#26221f", { weight: "900" });
+
+      const ring = this.add.graphics();
+      ring.fillStyle(0xfff8eb, 0.95);
+      ring.lineStyle(3, 0x26221f, 0.78);
+      ring.fillRoundedRect(36, y + 34, 318, 248, 18);
+      ring.strokeRoundedRect(36, y + 34, 318, 248, 18);
+      ring.lineStyle(4, 0xd77458, 0.9);
+      ring.lineBetween(48, y + 74, 342, y + 74);
+      ring.lineBetween(48, y + 108, 342, y + 108);
+      ring.lineStyle(4, 0x77a7c7, 0.9);
+      ring.lineBetween(48, y + 212, 342, y + 212);
+      ring.lineBetween(48, y + 246, 342, y + 246);
+      ring.fillStyle(0x26221f, 0.88);
+      [[48, y + 54], [342, y + 54], [48, y + 260], [342, y + 260]].forEach(([px, py]) => ring.fillRoundedRect(px - 6, py - 18, 12, 36, 4));
+
+      text(this, 195, y + 50, "FOOTWEAR DUEL", 12, "#d77458", { weight: "900" }).setOrigin(0.5, 0);
+      text(this, 195, y + 154, "VS", 34, "#26221f", { weight: "900" }).setOrigin(0.5);
+
+      const contenders = [
+        { name: "Cloudstep\nMary Jane", x: 110, color: 0xd77458, shoe: 0xfff0c7 },
+        { name: "Founder\nLoafer", x: 280, color: 0x77a7c7, shoe: 0x72927d }
+      ];
+      const outlines = [];
+      contenders.forEach((item, index) => {
+        const card = this.add.container(item.x, y + 162);
+        const bg = this.add.graphics();
+        bg.fillStyle(0xffffff, 0.92);
+        bg.lineStyle(2.2, item.color, 0.95);
+        bg.fillRoundedRect(-58, -68, 116, 148, 18);
+        bg.strokeRoundedRect(-58, -68, 116, 148, 18);
+        const stripe = this.add.rectangle(0, -56, 92, 8, item.color, 0.86).setOrigin(0.5);
+        const mat = this.add.ellipse(0, 2, 82, 42, 0xfff8eb, 1).setStrokeStyle(2, 0x26221f, 0.42);
+        const shoe = this.add.ellipse(0, -6, 70, 30, item.shoe, 1).setStrokeStyle(3, 0x26221f, 0.72);
+        const sole = this.add.rectangle(0, 10, 66, 6, 0x26221f, 0.7).setOrigin(0.5);
+        const name = text(this, 0, 38, item.name, 12, "#26221f", {
           weight: "900",
           align: "center",
-          wordWrap: { width: 100 }
+          wordWrap: { width: 96 }
         }).setOrigin(0.5, 0);
+        const vote = text(this, 0, 92, "Tap to vote", 9, "#d77458", { weight: "900", align: "center" }).setOrigin(0.5, 0);
+        const outline = this.add.graphics();
+        outline.lineStyle(0, item.color, 0);
+        outline.strokeRoundedRect(-63, -73, 126, 158, 22);
+        outlines.push(outline);
+        card.add([bg, stripe, mat, shoe, sole, name, vote, outline]);
+        card.setSize(126, 158).setInteractive(new Phaser.Geom.Rectangle(-63, -73, 126, 158), Phaser.Geom.Rectangle.Contains);
+        card.on("pointerdown", () => {
+          this.selectedDuelChoice = index;
+          outlines.forEach((entry, outlineIndex) => {
+            entry.clear();
+            entry.lineStyle(outlineIndex === index ? 4 : 0, contenders[outlineIndex].color, outlineIndex === index ? 1 : 0);
+            entry.strokeRoundedRect(-63, -73, 126, 158, 22);
+          });
+        });
       });
-      text(this, 194, y + 116, "VS", 28, "#d77458", { weight: "900" }).setOrigin(0.5);
       return;
     }
 
