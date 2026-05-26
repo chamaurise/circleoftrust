@@ -2,6 +2,24 @@ const GAME_WIDTH = 390;
 const GAME_HEIGHT = 844;
 const CAMPUS_WORLD_WIDTH = 760;
 const STORAGE_KEY = "circleOfTrustPhaserProgress";
+const AMIRA_POSES = [
+  { key: "amiraRight", width: 37, angle: 1.5 },
+  { key: "amiraRight", width: 36, angle: 1 },
+  { key: "amiraRight", width: 34, angle: 0.5 },
+  { key: "amiraFront", width: 31, angle: -0.5 },
+  { key: "amiraFront", width: 30, angle: 0 },
+  { key: "amiraFront", width: 31, angle: 0.5 },
+  { key: "amiraLeft", width: 34, angle: -0.5 },
+  { key: "amiraLeft", width: 36, angle: -1 },
+  { key: "amiraLeft", width: 37, angle: -1.5 },
+  { key: "amiraLeft", width: 35, angle: -1 },
+  { key: "amiraLeft", width: 33, angle: -0.5 },
+  { key: "amiraBack", width: 31, angle: 0.5 },
+  { key: "amiraBack", width: 30, angle: 0 },
+  { key: "amiraBack", width: 31, angle: -0.5 },
+  { key: "amiraRight", width: 33, angle: 0.5 },
+  { key: "amiraRight", width: 35, angle: 1 }
+];
 
 function viewportWidth() {
   return Math.ceil(window.visualViewport?.width || document.documentElement.clientWidth || window.innerWidth || GAME_WIDTH);
@@ -188,6 +206,37 @@ function screenTone(scene, x, y, width, height, color = 0x26221f, alpha = 0.12) 
   return dots;
 }
 
+function navIcon(scene, kind, x, y, color = 0x26221f, depth = 1) {
+  const g = scene.add.graphics().setDepth(depth);
+  g.lineStyle(2, color, 0.82);
+  g.fillStyle(color, 0.12);
+  if (kind === "Missions") {
+    g.strokeRoundedRect(x - 7, y - 7, 14, 14, 3);
+    g.lineBetween(x - 3, y - 2, x + 4, y - 2);
+    g.lineBetween(x - 3, y + 3, x + 4, y + 3);
+  } else if (kind === "Profile") {
+    g.strokeCircle(x, y - 3, 5);
+    g.lineBetween(x - 10, y + 9, x - 6, y + 5);
+    g.lineBetween(x - 6, y + 5, x + 6, y + 5);
+    g.lineBetween(x + 6, y + 5, x + 10, y + 9);
+  } else if (kind === "Ladder") {
+    g.lineBetween(x - 8, y + 8, x + 8, y + 8);
+    g.lineBetween(x - 4, y + 8, x - 4, y - 8);
+    g.lineBetween(x + 4, y + 8, x + 4, y - 4);
+    g.lineBetween(x - 8, y, x + 8, y);
+  } else if (kind === "Perks") {
+    g.strokeRoundedRect(x - 8, y - 3, 16, 12, 3);
+    g.lineBetween(x, y - 9, x, y + 9);
+    g.strokeCircle(x - 4, y - 7, 4);
+    g.strokeCircle(x + 4, y - 7, 4);
+  } else {
+    g.strokeCircle(x, y, 9);
+    g.lineBetween(x, y - 5, x, y + 2);
+    g.fillCircle(x, y + 6, 1.7);
+  }
+  return g;
+}
+
 class BootScene extends Phaser.Scene {
   constructor() {
     super("BootScene");
@@ -199,9 +248,15 @@ class BootScene extends Phaser.Scene {
     this.load.image("avatar", "assets/cartoon-avatar.webp");
     this.load.image("walk", "assets/cartoon-walk.webp");
     this.load.image("walkFrame", "assets/walk-frame.webp");
+    this.load.image("amiraFront", "assets/amira-front.png");
+    this.load.image("amiraBack", "assets/amira-back.png");
+    this.load.image("amiraLeft", "assets/amira-left.png");
+    this.load.image("amiraRight", "assets/amira-right.png");
     this.load.image("avatarCloseup", "assets/avatar-closeup.webp");
     this.load.image("minaConfident", "assets/mina-confident-closeup.png");
     this.load.image("minaDialogue", "assets/mina-confident-dialogue.png");
+    this.load.image("shoeMaryJane", "assets/shoe-mary-jane.png");
+    this.load.image("shoeLoafer", "assets/shoe-loafer.png");
   }
 
   create() {
@@ -238,9 +293,6 @@ class StartScene extends Phaser.Scene {
       weight: "900",
       wordWrap: { width: width - 220 }
     });
-    pill(this, width - 116, 390, 58, 32, 0xd77458);
-    text(this, width - 101, 397, "Lv. 01", 13, "#ffffff", { weight: "900" });
-
     const comicFlow = this.add.graphics();
     comicFlow.lineStyle(2, 0xd77458, 0.38);
     comicFlow.lineBetween(92, 434, 92, 458);
@@ -404,6 +456,10 @@ class CampusScene extends Phaser.Scene {
   }
 
   goToMission(mission) {
+    if (this.selectedMission?.id === mission.id && this.preview?.visible) {
+      this.scene.start("MissionScene", { mission });
+      return;
+    }
     this.selectedMission = mission;
     this.say(`Walking to ${mission.title}. Tap Enter when we arrive.`);
     this.moveTo(mission.x, mission.y + 58, () => this.showPreview(mission));
@@ -412,16 +468,15 @@ class CampusScene extends Phaser.Scene {
   moveTo(x, y, onComplete) {
     this.tweens.killTweensOf([this.player, this.playerShadow]);
     const duration = Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) * 5.4;
+    const safeDuration = Phaser.Math.Clamp(duration, 220, 1200);
     this.tweens.add({
       targets: [this.player, this.playerShadow],
       x,
       y: (_, target) => target === this.playerShadow ? y + 52 : y,
-      duration: Phaser.Math.Clamp(duration, 220, 1200),
+      duration: safeDuration,
       ease: "Sine.easeInOut",
       onComplete
     });
-    this.tweens.add({ targets: this.player, y: this.player.y - 8, yoyo: true, repeat: -1, duration: 180, ease: "Sine.inOut" });
-    this.time.delayedCall(Phaser.Math.Clamp(duration, 220, 1200), () => this.tweens.killTweensOf(this.player));
   }
 
   showPreview(mission) {
@@ -429,7 +484,7 @@ class CampusScene extends Phaser.Scene {
     this.previewTitle.setText(mission.title);
     this.previewMeta.setText(`${mission.room} | ${mission.time} | +${mission.xp} XP`);
     this.previewBody.setText(mission.prompt);
-    this.say(`This is ${mission.room}. Your choice here becomes a founder-ready signal.`);
+    this.say(`This is ${mission.room}. Tap Enter, or tap ${mission.title} again to begin.`);
   }
 
   hidePreview() {
@@ -497,9 +552,8 @@ class MissionScene extends Phaser.Scene {
         bg.fillRoundedRect(-58, -68, 116, 148, 18);
         bg.strokeRoundedRect(-58, -68, 116, 148, 18);
         const stripe = this.add.rectangle(0, -56, 92, 8, item.color, 0.86).setOrigin(0.5);
-        const mat = this.add.ellipse(0, 2, 82, 42, 0xfff8eb, 1).setStrokeStyle(2, 0x26221f, 0.42);
-        const shoe = this.add.ellipse(0, -6, 70, 30, item.shoe, 1).setStrokeStyle(3, 0x26221f, 0.72);
-        const sole = this.add.rectangle(0, 10, 66, 6, 0x26221f, 0.7).setOrigin(0.5);
+        const mat = this.add.ellipse(0, 2, 88, 44, 0xfff8eb, 1).setStrokeStyle(2, 0x26221f, 0.32);
+        const shoe = this.add.image(0, -4, index ? "shoeLoafer" : "shoeMaryJane").setDisplaySize(94, 58);
         const name = text(this, 0, 38, item.name, 12, "#26221f", {
           weight: "900",
           align: "center",
@@ -510,7 +564,7 @@ class MissionScene extends Phaser.Scene {
         outline.lineStyle(0, item.color, 0);
         outline.strokeRoundedRect(-63, -73, 126, 158, 22);
         outlines.push(outline);
-        card.add([bg, stripe, mat, shoe, sole, name, vote, outline]);
+        card.add([bg, stripe, mat, shoe, name, vote, outline]);
         card.setSize(126, 158).setInteractive(new Phaser.Geom.Rectangle(-63, -73, 126, 158), Phaser.Geom.Rectangle.Contains);
         card.on("pointerdown", () => {
           this.selectedDuelChoice = index;
@@ -549,6 +603,110 @@ class MissionScene extends Phaser.Scene {
     this.scene.start("ResultScene", { mission: this.mission, progress });
   }
 }
+
+MissionScene.prototype.create = function createMissionResponsive() {
+  const height = this.scale.height;
+  const width = Math.min(this.scale.width, GAME_WIDTH);
+  const left = Math.max(18, (this.scale.width - width) / 2 + 18);
+  const center = left + (width - 36) / 2;
+  this.safeLeft = left;
+  this.safeWidth = width;
+  this.safeCenter = center;
+
+  this.add.rectangle(this.scale.width / 2, height / 2, this.scale.width, height, this.mission.color).setAlpha(0.22);
+  panel(this, left, 42, width - 36, height - 84, 28, 0xfffbf2);
+  text(this, left + 24, 72, this.mission.room.toUpperCase(), 12, "#d77458", { weight: "900" });
+  text(this, left + 24, 104, this.mission.title, 34, "#26221f", { weight: "900", wordWrap: { width: width - 84 } });
+  text(this, left + 24, 178, this.mission.prompt, 16, "#6f655c", { weight: "800", wordWrap: { width: width - 84 } });
+
+  this.drawMiniGame();
+
+  const submit = panel(this, left + 24, height - 128, width - 84, 56, 18, 0x26221f);
+  text(this, center, height - 111, "Submit signal", 18, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
+  submit.setInteractive(new Phaser.Geom.Rectangle(left + 24, height - 128, width - 84, 56), Phaser.Geom.Rectangle.Contains);
+  submit.on("pointerdown", () => this.completeMission());
+};
+
+MissionScene.prototype.drawMiniGame = function drawMiniGameResponsive() {
+  const y = 292;
+  const left = this.safeLeft || 18;
+  const width = this.safeWidth || GAME_WIDTH;
+  const center = this.safeCenter || 195;
+
+  if (this.mission.id === "duel") {
+    text(this, left + 34, y - 8, "Tap the shoe with stronger purchase pull.", 13, "#26221f", { weight: "900" });
+
+    const ringX = left + 18;
+    const ringW = width - 72;
+    const ring = this.add.graphics();
+    ring.fillStyle(0xfff8eb, 0.95);
+    ring.lineStyle(3, 0x26221f, 0.78);
+    ring.fillRoundedRect(ringX, y + 34, ringW, 248, 18);
+    ring.strokeRoundedRect(ringX, y + 34, ringW, 248, 18);
+    ring.lineStyle(4, 0xd77458, 0.9);
+    ring.lineBetween(ringX + 12, y + 74, ringX + ringW - 12, y + 74);
+    ring.lineBetween(ringX + 12, y + 108, ringX + ringW - 12, y + 108);
+    ring.lineStyle(4, 0x77a7c7, 0.9);
+    ring.lineBetween(ringX + 12, y + 212, ringX + ringW - 12, y + 212);
+    ring.lineBetween(ringX + 12, y + 246, ringX + ringW - 12, y + 246);
+    ring.fillStyle(0x26221f, 0.88);
+    [[ringX + 12, y + 54], [ringX + ringW - 12, y + 54], [ringX + 12, y + 260], [ringX + ringW - 12, y + 260]].forEach(([px, py]) => ring.fillRoundedRect(px - 6, py - 18, 12, 36, 4));
+
+    text(this, center, y + 50, "FOOTWEAR DUEL", 12, "#d77458", { weight: "900" }).setOrigin(0.5, 0);
+    text(this, center, y + 154, "VS", 34, "#26221f", { weight: "900" }).setOrigin(0.5);
+
+    const contenders = [
+      { name: "Cloudstep\nMary Jane", x: center - 85, color: 0xd77458, texture: "shoeMaryJane" },
+      { name: "Founder\nLoafer", x: center + 85, color: 0x77a7c7, texture: "shoeLoafer" }
+    ];
+    const outlines = [];
+    contenders.forEach((item, index) => {
+      const card = this.add.container(item.x, y + 162);
+      const bg = this.add.graphics();
+      bg.fillStyle(0xffffff, 0.92);
+      bg.lineStyle(2.2, item.color, 0.95);
+      bg.fillRoundedRect(-58, -68, 116, 148, 18);
+      bg.strokeRoundedRect(-58, -68, 116, 148, 18);
+      const stripe = this.add.rectangle(0, -56, 92, 8, item.color, 0.86).setOrigin(0.5);
+      const mat = this.add.ellipse(0, 2, 88, 44, 0xfff8eb, 1).setStrokeStyle(2, 0x26221f, 0.32);
+      const shoe = this.add.image(0, -4, item.texture).setDisplaySize(94, 58);
+      const name = text(this, 0, 38, item.name, 12, "#26221f", {
+        weight: "900",
+        align: "center",
+        wordWrap: { width: 96 }
+      }).setOrigin(0.5, 0);
+      const vote = text(this, 0, 92, "Tap to vote", 9, "#d77458", { weight: "900", align: "center" }).setOrigin(0.5, 0);
+      const outline = this.add.graphics();
+      outline.strokeRoundedRect(-63, -73, 126, 158, 22);
+      outlines.push(outline);
+      card.add([bg, stripe, mat, shoe, name, vote, outline]);
+      card.setSize(126, 158).setInteractive(new Phaser.Geom.Rectangle(-63, -73, 126, 158), Phaser.Geom.Rectangle.Contains);
+      card.on("pointerdown", () => {
+        this.selectedDuelChoice = index;
+        outlines.forEach((entry, outlineIndex) => {
+          entry.clear();
+          entry.lineStyle(outlineIndex === index ? 4 : 0, contenders[outlineIndex].color, outlineIndex === index ? 1 : 0);
+          entry.strokeRoundedRect(-63, -73, 126, 158, 22);
+        });
+      });
+    });
+    return;
+  }
+
+  if (this.mission.id === "price") {
+    [0, 1, 2].forEach((_, index) => {
+      pill(this, left + 40, y + 54 + index * 58, width - 130, 26, 0xffffff);
+      this.add.rectangle(left + 56 + index * 58, y + 67 + index * 58, 64 + index * 28, 12, this.mission.color).setOrigin(0, 0.5);
+      text(this, left + 40, y + 30 + index * 58, `$${99 + index * 35} comfort ceiling`, 14, "#26221f", { weight: "900" });
+    });
+    return;
+  }
+
+  ["A", "B", "C"].forEach((label, index) => {
+    panel(this, left + 36, y + 34 + index * 76, width - 108, 54, 16, 0xffffff);
+    text(this, left + 60, y + 48 + index * 76, `${label}. ${["Strongest", "Needs proof", "Founder action"][index]}`, 16, "#26221f", { weight: "900" });
+  });
+};
 
 class ResultScene extends Phaser.Scene {
   constructor() {
@@ -617,9 +775,6 @@ StartScene.prototype.create = function create() {
     weight: "900",
     wordWrap: { width: width - 216 }
   }).setDepth(6);
-  pill(this, width - 114, 396, 58, 30, 0xd77458).setDepth(6);
-  text(this, width - 99, 402, "Lv. 01", 12, "#ffffff", { weight: "900" }).setDepth(7);
-
   const beam = this.add.graphics().setDepth(4);
   beam.lineStyle(2, 0xd77458, 0.42);
   beam.lineBetween(98, 448, 98, 474);
@@ -690,8 +845,6 @@ StartScene.prototype.create = function createMangaOpening() {
     weight: "900",
     wordWrap: { width: width - 226 }
   }).setDepth(7);
-  pill(this, width - 114, 394, 58, 30, 0xd77458).setDepth(7);
-  text(this, width - 99, 400, "Lv. 01", 12, "#ffffff", { weight: "900" }).setDepth(8);
 
   const flow = this.add.graphics().setDepth(5);
   flow.lineStyle(3, 0x26221f, 0.72);
@@ -721,10 +874,11 @@ StartScene.prototype.create = function createMangaOpening() {
     }).setDepth(7);
   });
 
-  const start = mangaPanel(this, 40, height - 132, width - 80, 60, { skew: 8, fill: 0xd77458, alpha: 0.96, strokeWidth: 3 }).setDepth(9);
-  screenTone(this, 48, height - 124, width - 96, 46, 0xffffff, 0.13).setDepth(10);
-  text(this, width / 2, height - 114, "Enter VIP Archive", 18, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(11);
-  start.setInteractive(new Phaser.Geom.Rectangle(40, height - 132, width - 80, 60), Phaser.Geom.Rectangle.Contains);
+  const startY = height - 82;
+  const start = mangaPanel(this, 40, startY, width - 80, 58, { skew: 8, fill: 0xd77458, alpha: 0.96, strokeWidth: 3 }).setDepth(9);
+  screenTone(this, 48, startY + 8, width - 96, 42, 0xffffff, 0.13).setDepth(10);
+  text(this, width / 2, startY + 18, "Enter VIP Archive", 18, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(11);
+  start.setInteractive(new Phaser.Geom.Rectangle(40, startY, width - 80, 58), Phaser.Geom.Rectangle.Contains);
   start.on("pointerdown", () => this.scene.start("CampusScene"));
   this.tweens.add({ targets: start, alpha: 0.86, yoyo: true, repeat: -1, duration: 860, ease: "Sine.inOut" });
 };
@@ -801,8 +955,30 @@ CampusScene.prototype.pinHudToCamera = function pinHudToCamera() {
 };
 
 CampusScene.prototype.createPlayer = function createPlayer() {
-  this.player = this.add.image(112, 630, "avatar").setDisplaySize(54, 98).setDepth(20);
-  this.playerShadow = this.add.ellipse(112, 680, 52, 15, 0x26221f, 0.18).setDepth(19);
+  this.playerPoseIndex = 4;
+  this.playerBaseHeight = 58;
+  this.player = this.add.image(112, 570, "amiraFront").setDisplaySize(30, 58).setDepth(20);
+  this.playerShadow = this.add.ellipse(112, 600, 30, 9, 0x26221f, 0.18).setDepth(19);
+};
+
+CampusScene.prototype.getPlayerPose = function getPlayerPose(x, y) {
+  const dx = x - this.player.x;
+  const dy = y - this.player.y;
+  if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return AMIRA_POSES[this.playerPoseIndex || 4];
+  const degrees = Phaser.Math.RadToDeg(Math.atan2(dy, dx));
+  const normalized = (degrees + 360) % 360;
+  const index = Math.round(normalized / 22.5) % 16;
+  return { ...AMIRA_POSES[index], index };
+};
+
+CampusScene.prototype.setPlayerDirection = function setPlayerDirection(x, y) {
+  const pose = this.getPlayerPose(x, y);
+  if (pose.index === this.playerPoseIndex) return pose;
+  this.playerPoseIndex = pose.index;
+  this.player.setTexture(pose.key);
+  this.player.setDisplaySize(pose.width, this.playerBaseHeight);
+  this.player.setAngle(pose.angle);
+  return pose;
 };
 
 CampusScene.prototype.createControls = function createControls() {
@@ -812,22 +988,25 @@ CampusScene.prototype.createControls = function createControls() {
 CampusScene.prototype.createMissionPins = function createMissionPins() {
   this.pins = missions.map((mission) => {
     const container = this.add.container(mission.x, mission.y).setDepth(10);
-    const glow = this.add.circle(0, 0, 38, mission.color, 0.18);
-    const marker = this.add.circle(0, 0, 8, mission.color, 0.98).setStrokeStyle(2, 0xfffbf2);
+    const glow = this.add.circle(0, 0, 34, mission.color, 0.16);
+    const post = this.add.rectangle(0, 24, 7, 34, 0x6f655c, 0.8).setOrigin(0.5, 0);
+    const marker = this.add.circle(0, 0, 9, mission.color, 0.98).setStrokeStyle(2.5, 0xfffbf2);
     const labelBg = this.add.graphics();
-    labelBg.fillStyle(0xfffbf2, 0.78);
-    labelBg.lineStyle(1.1, 0xffffff, 0.75);
-    labelBg.fillRoundedRect(-54, 15, 108, 28, 10);
-    labelBg.strokeRoundedRect(-54, 15, 108, 28, 10);
-    const title = text(this, 0, 21, mission.title, 10, "#26221f", {
+    labelBg.fillStyle(0xfffbf2, 0.9);
+    labelBg.lineStyle(2.2, 0x26221f, 0.72);
+    labelBg.fillRoundedRect(-58, 17, 116, 32, 8);
+    labelBg.strokeRoundedRect(-58, 17, 116, 32, 8);
+    labelBg.lineStyle(1, 0xffffff, 0.72);
+    labelBg.lineBetween(-44, 23, 44, 23);
+    const title = text(this, 0, 24, mission.title, 9, "#26221f", {
       weight: "900",
       align: "center",
       wordWrap: { width: 96 }
     }).setOrigin(0.5, 0);
-    const bang = this.add.circle(48, 10, 10, this.progress.completed.includes(mission.id) ? 0x72927d : 0xd77458).setStrokeStyle(1.5, 0xfffbf2);
-    const bangText = text(this, 48, 3, this.progress.completed.includes(mission.id) ? "✓" : "!", 12, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
-    container.add([glow, marker, labelBg, title, bang, bangText]);
-    container.setSize(120, 76).setInteractive(new Phaser.Geom.Rectangle(-60, -10, 120, 76), Phaser.Geom.Rectangle.Contains);
+    const bang = this.add.circle(52, 16, 10, this.progress.completed.includes(mission.id) ? 0x72927d : 0xd77458).setStrokeStyle(1.5, 0xfffbf2);
+    const bangText = text(this, 52, 9, this.progress.completed.includes(mission.id) ? "✓" : "!", 12, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
+    container.add([glow, post, marker, labelBg, title, bang, bangText]);
+    container.setSize(126, 86).setInteractive(new Phaser.Geom.Rectangle(-63, -12, 126, 88), Phaser.Geom.Rectangle.Contains);
     container.on("pointerdown", () => this.goToMission(mission));
     this.tweens.add({ targets: glow, alpha: 0.32, scale: 1.08, yoyo: true, repeat: -1, duration: 900, ease: "Sine.inOut" });
     this.tweens.add({ targets: bang, y: bang.y - 3, yoyo: true, repeat: -1, duration: 700, ease: "Sine.inOut" });
@@ -851,23 +1030,68 @@ CampusScene.prototype.createQuest = function createQuest() {
 
 CampusScene.prototype.createMina = function createMina() {
   const speech = this.add.graphics().setDepth(39);
-  speech.fillStyle(0xfff0c7, 0.84);
-  speech.lineStyle(1.2, 0xffffff, 0.72);
-  speech.fillRoundedRect(14, this.scale.height - 166, this.scale.width - 28, 60, 18);
-  speech.strokeRoundedRect(14, this.scale.height - 166, this.scale.width - 28, 60, 18);
-  this.add.image(48, this.scale.height - 134, "avatar").setDisplaySize(36, 58).setDepth(41);
-  this.minaText = text(this, 78, this.scale.height - 152, "I am Mina. Tap any mission room and I will walk you there.", 13, "#26221f", {
+  const y = this.scale.height - 172;
+  speech.fillStyle(0xfffbf2, 0.9);
+  speech.lineStyle(2.4, 0x26221f, 0.76);
+  speech.fillRoundedRect(14, y, this.scale.width - 28, 64, 18);
+  speech.strokeRoundedRect(14, y, this.scale.width - 28, 64, 18);
+  speech.fillPoints([
+    new Phaser.Geom.Point(58, y + 64),
+    new Phaser.Geom.Point(78, y + 64),
+    new Phaser.Geom.Point(64, y + 82)
+  ], true);
+  speech.lineBetween(58, y + 64, 64, y + 82);
+  speech.lineBetween(64, y + 82, 78, y + 64);
+  screenTone(this, 88, y + 10, this.scale.width - 122, 42, 0xd77458, 0.07).setDepth(40).setScrollFactor(0);
+  this.add.image(50, y + 36, "minaConfident").setDisplaySize(48, 48).setDepth(41);
+  this.minaText = text(this, 82, y + 16, "I am Mina. Drag the campus, then tap a mission room.", 12, "#26221f", {
     weight: "900",
-    wordWrap: { width: this.scale.width - 106 }
+    wordWrap: { width: this.scale.width - 118 }
   }).setDepth(41);
+};
+
+CampusScene.prototype.createPreview = function createPreview() {
+  const width = this.scale.width - 36;
+  const top = this.scale.height - 318;
+  this.preview = this.add.container(18, top).setDepth(45).setScrollFactor(0).setVisible(false);
+
+  const bg = this.add.graphics();
+  bg.fillStyle(0xfffbf2, 0.94);
+  bg.lineStyle(2.2, 0x26221f, 0.7);
+  bg.fillRoundedRect(0, 0, width, 124, 18);
+  bg.strokeRoundedRect(0, 0, width, 124, 18);
+  bg.lineStyle(1, 0xffffff, 0.82);
+  bg.lineBetween(20, 12, width - 20, 12);
+
+  this.previewTitle = text(this, 18, 16, "", 19, "#26221f", { weight: "900" });
+  this.previewMeta = text(this, 18, 45, "", 11, "#d77458", { weight: "900" });
+  this.previewBody = text(this, 18, 68, "", 12, "#6f655c", {
+    weight: "800",
+    wordWrap: { width: width - 140 }
+  });
+
+  const enterBg = this.add.graphics();
+  enterBg.fillStyle(0x26221f, 0.96);
+  enterBg.lineStyle(1.6, 0xffffff, 0.72);
+  enterBg.fillRoundedRect(width - 114, 72, 94, 38, 14);
+  enterBg.strokeRoundedRect(width - 114, 72, 94, 38, 14);
+  const enterText = text(this, width - 67, 82, "Enter", 14, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0);
+  const enterZone = this.add.zone(width - 67, 91, 104, 48).setInteractive({ useHandCursor: true });
+  enterZone.on("pointerdown", () => {
+    if (this.selectedMission) this.scene.start("MissionScene", { mission: this.selectedMission });
+  });
+
+  this.preview.add([bg, this.previewTitle, this.previewMeta, this.previewBody, enterBg, enterText, enterZone]);
 };
 
 CampusScene.prototype.createBottomMenu = function createBottomMenu() {
   const nav = this.add.graphics().setDepth(50);
-  nav.fillStyle(0xfffbf2, 0.86);
-  nav.lineStyle(1.2, 0xffffff, 0.72);
-  nav.fillRoundedRect(14, this.scale.height - 86, this.scale.width - 28, 64, 20);
-  nav.strokeRoundedRect(14, this.scale.height - 86, this.scale.width - 28, 64, 20);
+  nav.fillStyle(0xfffbf2, 0.92);
+  nav.lineStyle(2.2, 0x26221f, 0.64);
+  nav.fillRoundedRect(14, this.scale.height - 86, this.scale.width - 28, 64, 16);
+  nav.strokeRoundedRect(14, this.scale.height - 86, this.scale.width - 28, 64, 16);
+  nav.lineStyle(1, 0xffffff, 0.8);
+  nav.lineBetween(34, this.scale.height - 76, this.scale.width - 34, this.scale.height - 76);
   const items = [
     ["Missions", 58],
     ["Profile", 126],
@@ -877,7 +1101,8 @@ CampusScene.prototype.createBottomMenu = function createBottomMenu() {
   ];
   items.forEach(([label, x]) => {
     const active = label === "Missions";
-    const circle = this.add.circle(x, this.scale.height - 58, 14, active ? 0xfff0c7 : 0xffffff, active ? 0.98 : 0.5).setStrokeStyle(1.25, active ? 0xd77458 : 0x26221f, active ? 0.85 : 0.35).setDepth(51);
+    const circle = this.add.circle(x, this.scale.height - 58, 15, active ? 0xfff0c7 : 0xffffff, active ? 0.98 : 0.58).setStrokeStyle(1.5, active ? 0xd77458 : 0x26221f, active ? 0.95 : 0.38).setDepth(51);
+    navIcon(this, label, x, this.scale.height - 58, active ? 0xd77458 : 0x26221f, 52).setScrollFactor(0);
     text(this, x, this.scale.height - 41, label, 9, "#26221f", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(51);
     circle.setInteractive();
     circle.on("pointerdown", () => {
@@ -894,17 +1119,32 @@ CampusScene.prototype.moveTo = function moveTo(x, y, onComplete) {
   this.tweens.killTweensOf([this.player, this.playerShadow]);
   const clampedX = Phaser.Math.Clamp(x, 34, this.worldWidth - 34);
   const clampedY = Phaser.Math.Clamp(y, 120, this.scale.height - 190);
-  const shadowY = clampedY + 50;
+  const pose = this.setPlayerDirection(clampedX, clampedY);
+  const shadowY = clampedY + 30;
   const duration = Phaser.Math.Distance.Between(this.player.x, this.player.y, clampedX, clampedY) * 4.3;
   const safeDuration = Phaser.Math.Clamp(duration, 220, 1200);
   const targetScrollX = Phaser.Math.Clamp(clampedX - this.scale.width / 2, 0, this.worldWidth - this.scale.width);
+  this.player.setScale(1);
+  this.player.setAngle(pose?.angle || 0);
+  this.player.setDisplaySize(pose.width, this.playerBaseHeight);
+  this.player.setDepth(20 + clampedY / 1000);
   this.tweens.add({
     targets: this.player,
     x: clampedX,
     y: clampedY,
     duration: safeDuration,
     ease: "Sine.easeInOut",
-    onComplete
+    onUpdate: () => {
+      this.player.setDepth(20 + this.player.y / 1000);
+      this.playerShadow.setDepth(this.player.depth - 0.01);
+    },
+    onComplete: () => {
+      const currentPose = AMIRA_POSES[this.playerPoseIndex || 4];
+      this.player.setScale(1);
+      this.player.setAngle(currentPose.angle);
+      this.player.setDisplaySize(currentPose.width, this.playerBaseHeight);
+      if (onComplete) onComplete();
+    }
   });
   this.tweens.add({
     targets: this.playerShadow,
@@ -918,12 +1158,6 @@ CampusScene.prototype.moveTo = function moveTo(x, y, onComplete) {
     scrollX: targetScrollX,
     duration: safeDuration,
     ease: "Sine.easeInOut"
-  });
-  this.tweens.add({ targets: this.player, scaleY: 0.96, yoyo: true, repeat: -1, duration: 160, ease: "Sine.inOut" });
-  this.time.delayedCall(safeDuration, () => {
-    this.tweens.killTweensOf(this.player);
-    this.player.setScale(1);
-    this.player.setDisplaySize(54, 98);
   });
 };
 
