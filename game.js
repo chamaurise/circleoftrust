@@ -3,6 +3,14 @@ const GAME_HEIGHT = 844;
 const CAMPUS_WORLD_WIDTH = 760;
 const STORAGE_KEY = "circleOfTrustPhaserProgress";
 
+function viewportWidth() {
+  return Math.ceil(window.visualViewport?.width || document.documentElement.clientWidth || window.innerWidth || GAME_WIDTH);
+}
+
+function viewportHeight() {
+  return Math.ceil(window.visualViewport?.height || document.documentElement.clientHeight || window.innerHeight || GAME_HEIGHT);
+}
+
 const missions = [
   {
     id: "duel",
@@ -924,10 +932,10 @@ const config = {
   parent: "phaser-game",
   backgroundColor: "#fff8eb",
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.NO_CENTER,
-    width: GAME_WIDTH,
-    height: GAME_HEIGHT
+    width: Math.max(GAME_WIDTH, viewportWidth()),
+    height: Math.max(GAME_HEIGHT, viewportHeight())
   },
   input: {
     activePointers: 3
