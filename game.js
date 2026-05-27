@@ -25,26 +25,11 @@ const AMIRA_POSES = [
 ];
 
 function viewportWidth() {
-  const candidates = [
-    window.visualViewport?.width,
-    window.innerWidth,
-    document.documentElement.clientWidth,
-    window.screen?.width
-  ].filter(Boolean);
-  return Math.max(320, Math.ceil(Math.max(...candidates, GAME_WIDTH)));
+  return Math.max(320, Math.ceil(window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || GAME_WIDTH));
 }
 
 function viewportHeight() {
-  const screenHeight = window.screen
-    ? Math.max(window.screen.height || 0, window.screen.availHeight || 0)
-    : 0;
-  const candidates = [
-    window.visualViewport?.height,
-    window.innerHeight,
-    document.documentElement.clientHeight,
-    screenHeight
-  ].filter(Boolean);
-  return Math.max(620, Math.ceil(Math.max(...candidates, GAME_HEIGHT)));
+  return Math.max(620, Math.ceil(window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || GAME_HEIGHT));
 }
 
 function syncAppViewport() {
