@@ -2,7 +2,7 @@ const GAME_WIDTH = 390;
 const GAME_HEIGHT = 844;
 const CAMPUS_WORLD_WIDTH = 760;
 const CAMPUS_WORLD_HEIGHT = 1040;
-const CAMPUS_TOP_UI_HEIGHT = 82;
+const CAMPUS_TOP_UI_HEIGHT = 58;
 const CAMPUS_BOTTOM_UI_HEIGHT = 104;
 const STORAGE_KEY = "circleOfTrustPhaserProgress";
 const AMIRA_POSES = [
@@ -25,11 +25,26 @@ const AMIRA_POSES = [
 ];
 
 function viewportWidth() {
-  return Math.max(320, Math.ceil(window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || GAME_WIDTH));
+  const candidates = [
+    window.visualViewport?.width,
+    window.innerWidth,
+    document.documentElement.clientWidth,
+    window.screen?.width
+  ].filter(Boolean);
+  return Math.max(320, Math.ceil(Math.max(...candidates, GAME_WIDTH)));
 }
 
 function viewportHeight() {
-  return Math.max(620, Math.ceil(window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || GAME_HEIGHT));
+  const screenHeight = window.screen
+    ? Math.max(window.screen.height || 0, window.screen.availHeight || 0)
+    : 0;
+  const candidates = [
+    window.visualViewport?.height,
+    window.innerHeight,
+    document.documentElement.clientHeight,
+    screenHeight
+  ].filter(Boolean);
+  return Math.max(620, Math.ceil(Math.max(...candidates, GAME_HEIGHT)));
 }
 
 function syncAppViewport() {
@@ -303,6 +318,29 @@ function navIcon(scene, kind, x, y, color = 0x26221f, depth = 1) {
     g.fillCircle(x, y + 6, 1.7);
   }
   return g;
+}
+
+function backButton(scene, label = "Back", target = "CampusScene") {
+  const button = scene.add.container(18, 18).setDepth(90).setScrollFactor(0);
+  const bg = scene.add.graphics();
+  bg.fillStyle(0xfffbf2, 0.98);
+  bg.lineStyle(1.8, 0x26221f, 0.62);
+  bg.fillRoundedRect(0, 0, 88, 34, 13);
+  bg.strokeRoundedRect(0, 0, 88, 34, 13);
+  const arrow = scene.add.graphics();
+  arrow.lineStyle(2.2, 0x26221f, 0.88);
+  arrow.lineBetween(30, 11, 20, 17);
+  arrow.lineBetween(20, 17, 30, 23);
+  arrow.lineBetween(21, 17, 40, 17);
+  const copy = text(scene, 52, 9, label, 10, "#26221f", { weight: "900", align: "center" }).setOrigin(0.5, 0);
+  const hit = scene.add.zone(0, 0, 104, 44).setOrigin(0, 0).setInteractive({
+    hitArea: new Phaser.Geom.Rectangle(0, 0, 104, 44),
+    hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+    useHandCursor: true
+  });
+  hit.on("pointerdown", () => scene.scene.start(target));
+  button.add([bg, arrow, copy, hit]);
+  return button;
 }
 
 class BootScene extends Phaser.Scene {
@@ -702,9 +740,10 @@ MissionScene.prototype.create = function createMissionResponsive() {
 
   this.add.rectangle(this.scale.width / 2, height / 2, this.scale.width, height, this.mission.color).setAlpha(0.22);
   panel(this, left, 42, width - 36, height - 84, 28, 0xfffbf2);
-  text(this, left + 24, 72, this.mission.room.toUpperCase(), 12, "#d77458", { weight: "900" });
-  text(this, left + 24, 104, this.mission.title, 34, "#26221f", { weight: "900", wordWrap: { width: width - 84 } });
-  text(this, left + 24, 178, this.mission.prompt, 16, "#6f655c", { weight: "800", wordWrap: { width: width - 84 } });
+  backButton(this, "Back", "CampusScene");
+  text(this, left + 24, 86, this.mission.room.toUpperCase(), 12, "#d77458", { weight: "900" });
+  text(this, left + 24, 118, this.mission.title, 31, "#26221f", { weight: "900", wordWrap: { width: width - 84 } });
+  text(this, left + 24, 186, this.mission.prompt, 15, "#6f655c", { weight: "800", wordWrap: { width: width - 84 } });
 
   this.drawMiniGame();
 
@@ -869,6 +908,7 @@ class ResultScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.add.rectangle(width / 2, height / 2, width, height, 0xfff0c7);
     panel(this, 22, 72, width - 44, height - 144, 28, 0xfffbf2);
+    backButton(this, "Back", "CampusScene");
     text(this, 48, 104, "SIGNAL CAPTURED", 12, "#d77458", { weight: "900" });
     text(this, 48, 140, `+${this.mission.xp} XP`, 48, "#26221f", { weight: "900" });
     text(this, 48, 212, `${this.mission.title} is now part of the founder brief.`, 20, "#26221f", {
@@ -1049,24 +1089,13 @@ CampusScene.prototype.create = function create() {
 
   this.add.rectangle(this.worldWidth / 2, this.worldHeight / 2, this.worldWidth, this.worldHeight, 0xbfe0a7);
   this.add.image(this.worldWidth / 2, this.worldHeight / 2, "campus").setDisplaySize(this.worldWidth, this.worldHeight).setAlpha(0.96);
-  const path = this.add.graphics().setDepth(3);
-  path.lineStyle(18, 0xfff0c7, 0.22);
-  path.beginPath();
-  path.moveTo(80, 210);
-  path.lineTo(330, 220);
-  path.lineTo(548, 438);
-  path.lineTo(214, 664);
-  path.lineTo(650, 836);
-  path.strokePath();
-  path.lineStyle(3, 0xffffff, 0.38);
-  path.strokePath();
   this.createCampusLighting();
 
   this.createHud();
   this.createQuest();
+  this.createMissionChecklist();
   this.createViewportChrome();
   this.createMissionPins();
-  this.createRankTotem();
   this.createPlayer();
   this.createMina();
   this.createPreview();
@@ -1107,6 +1136,7 @@ CampusScene.prototype.create = function create() {
     this.moveTo(pointer.worldX, pointer.worldY);
     this.hidePreview();
     this.hideLadder();
+    this.closeMissionChecklist();
     this.say("Drag the campus to explore. Tap a mission room and I will walk you there.");
   });
 
@@ -1169,7 +1199,7 @@ CampusScene.prototype.createHud = function createHud() {
   const percent = Math.min(1, (this.progress.xp % 100) / 100);
   const hud = this.add.graphics().setDepth(30);
   hud.fillStyle(0xfffbf2, 1);
-  hud.fillRect(0, 0, this.scale.width, 52);
+  hud.fillRect(0, 0, this.scale.width, CAMPUS_TOP_UI_HEIGHT);
   hud.fillStyle(0x26221f, 1);
   hud.fillRoundedRect(10, 8, this.scale.width - 20, 38, 16);
   hud.fillStyle(0xffffff, 0.08);
@@ -1183,7 +1213,7 @@ CampusScene.prototype.createHud = function createHud() {
   hud.lineStyle(1.5, 0xffffff, 0.68);
   hud.strokeRoundedRect(20, 14, 30, 30, 10);
   hud.lineStyle(2, 0x26221f, 0.18);
-  hud.lineBetween(0, 51, this.scale.width, 51);
+  hud.lineBetween(0, CAMPUS_TOP_UI_HEIGHT - 1, this.scale.width, CAMPUS_TOP_UI_HEIGHT - 1);
   hud.lineStyle(1, 0xffffff, 0.5);
   hud.lineBetween(18, 9, this.scale.width - 18, 9);
   this.add.image(35, 34, "amiraFront").setDisplaySize(18, 34).setDepth(31);
@@ -1337,22 +1367,29 @@ CampusScene.prototype.createRankTotem = function createRankTotem() {
 
 CampusScene.prototype.createQuest = function createQuest() {
   const mission = nextMission(this.progress);
-  const strip = this.add.graphics().setDepth(28);
-  strip.fillStyle(0xfffbf2, 1);
-  strip.fillRect(0, 52, this.scale.width, CAMPUS_TOP_UI_HEIGHT - 52);
-  strip.fillStyle(0xfff0c7, 1);
-  strip.fillRoundedRect(12, 56, this.scale.width - 24, 20, 10);
-  strip.fillStyle(0xffffff, 0.72);
-  strip.fillRoundedRect(18, 60, this.scale.width - 36, 5, 3);
-  strip.lineStyle(2, 0x26221f, 0.18);
-  strip.lineBetween(0, CAMPUS_TOP_UI_HEIGHT - 1, this.scale.width, CAMPUS_TOP_UI_HEIGHT - 1);
-  strip.lineStyle(1.4, 0x26221f, 0.22);
-  strip.strokeRoundedRect(12, 56, this.scale.width - 24, 20, 10);
-  text(this, 28, 61, "NEXT", 7.2, "#d77458", { weight: "900" }).setDepth(29);
-  this.questText = text(this, 68, 59, `${mission.title}: ${mission.short}`, 9.2, "#26221f", {
+  this.questText = null;
+  const btn = this.add.container(18, 29).setDepth(34).setScrollFactor(0);
+  const bg = this.add.graphics();
+  bg.fillStyle(0xfff0c7, 1);
+  bg.lineStyle(1.6, 0xe5bc58, 0.9);
+  bg.fillCircle(0, 0, 18);
+  bg.strokeCircle(0, 0, 18);
+  bg.fillStyle(0xffffff, 0.46);
+  bg.fillCircle(-5, -5, 6);
+  const icon = navIcon(this, "Missions", 0, 0, 0xd77458, 35);
+  const outstanding = Math.max(0, missions.length - this.progress.completed.length);
+  const badge = this.add.circle(14, -12, 7, outstanding ? 0xd77458 : 0x72927d, 1).setDepth(36);
+  const badgeText = text(this, 14, -17, `${outstanding}`, 7, "#ffffff", {
     weight: "900",
-    wordWrap: { width: this.scale.width - 92 }
-  }).setDepth(29);
+    align: "center"
+  }).setOrigin(0.5, 0).setDepth(37);
+  const hit = this.add.zone(-24, -24, 56, 56).setOrigin(0, 0).setInteractive({
+    hitArea: new Phaser.Geom.Rectangle(0, 0, 56, 56),
+    hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+    useHandCursor: true
+  });
+  hit.on("pointerdown", () => this.openMissionChecklist());
+  btn.add([bg, icon, badge, badgeText, hit]);
 };
 
 CampusScene.prototype.createViewportChrome = function createViewportChrome() {
@@ -1367,6 +1404,93 @@ CampusScene.prototype.createViewportChrome = function createViewportChrome() {
   frame.fillRect(0, top, this.scale.width, 8);
   frame.fillStyle(0xffffff, 0.16);
   frame.fillRect(0, bottom - 8, this.scale.width, 8);
+};
+
+CampusScene.prototype.createMissionChecklist = function createMissionChecklist() {
+  const width = this.scale.width - 28;
+  const x = 14;
+  const y = 72;
+  const rowH = 54;
+  const height = 104 + missions.length * rowH;
+  this.missionChecklist = this.add.container(0, 0).setDepth(65).setScrollFactor(0).setVisible(false);
+
+  const shade = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x171412, 0.38).setOrigin(0, 0);
+  shade.setInteractive(new Phaser.Geom.Rectangle(0, 0, this.scale.width, this.scale.height), Phaser.Geom.Rectangle.Contains);
+  const panelBg = this.add.graphics();
+  panelBg.fillStyle(0xfffbf2, 0.98);
+  panelBg.lineStyle(2.4, 0x26221f, 0.72);
+  panelBg.fillRoundedRect(x, y, width, height, 22);
+  panelBg.strokeRoundedRect(x, y, width, height, 22);
+  panelBg.fillStyle(0x26221f, 0.94);
+  panelBg.fillRoundedRect(x + 10, y + 10, width - 20, 56, 18);
+  panelBg.fillStyle(0xd77458, 0.16);
+  panelBg.fillCircle(x + width - 74, y + 38, 44);
+
+  const title = text(this, x + 26, y + 24, "Mission List", 20, "#ffffff", { weight: "900" });
+  const sub = text(this, x + 26, y + 48, "Complete rooms to earn EXP.", 9.5, "#fff0c7", { weight: "900" });
+  const closeBg = this.add.graphics();
+  closeBg.fillStyle(0xfffbf2, 0.18);
+  closeBg.lineStyle(1.4, 0xfffbf2, 0.48);
+  closeBg.fillRoundedRect(x + width - 46, y + 22, 28, 28, 9);
+  closeBg.strokeRoundedRect(x + width - 46, y + 22, 28, 28, 9);
+  const closeText = text(this, x + width - 32, y + 27, "X", 12, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
+  const closeHit = this.add.zone(x + width - 52, y + 16, 42, 42).setOrigin(0, 0).setInteractive({
+    hitArea: new Phaser.Geom.Rectangle(0, 0, 42, 42),
+    hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+    useHandCursor: true
+  });
+  closeHit.on("pointerdown", () => this.closeMissionChecklist());
+
+  const rows = [];
+  missions.forEach((mission, index) => {
+    const rowY = y + 84 + index * rowH;
+    const done = this.progress.completed.includes(mission.id);
+    const row = this.add.graphics();
+    row.fillStyle(done ? 0xeef6ef : 0xffffff, 0.96);
+    row.lineStyle(1.4, done ? 0x72927d : 0x26221f, done ? 0.44 : 0.14);
+    row.fillRoundedRect(x + 18, rowY, width - 36, 42, 14);
+    row.strokeRoundedRect(x + 18, rowY, width - 36, 42, 14);
+    row.fillStyle(done ? 0x72927d : mission.color, 1);
+    row.fillCircle(x + 40, rowY + 21, 13);
+    const mark = text(this, x + 40, rowY + 12, done ? "OK" : "!", done ? 6.5 : 12, "#ffffff", {
+      weight: "900",
+      align: "center"
+    }).setOrigin(0.5, 0);
+    const label = text(this, x + 62, rowY + 9, mission.title, 12, "#26221f", {
+      weight: "900",
+      wordWrap: { width: width - 150 }
+    });
+    const meta = text(this, x + 62, rowY + 26, `${mission.room} | +${mission.xp} EXP`, 8, done ? "#72927d" : "#d77458", {
+      weight: "900"
+    });
+    const state = text(this, x + width - 62, rowY + 14, done ? "DONE" : "OPEN", 8, done ? "#72927d" : "#d77458", {
+      weight: "900",
+      align: "right"
+    }).setOrigin(0.5, 0);
+    const hit = this.add.zone(x + 18, rowY, width - 36, 42).setOrigin(0, 0).setInteractive({
+      hitArea: new Phaser.Geom.Rectangle(0, 0, width - 36, 42),
+      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      useHandCursor: true
+    });
+    hit.on("pointerdown", () => {
+      this.closeMissionChecklist();
+      this.goToMission(mission);
+    });
+    rows.push(row, mark, label, meta, state, hit);
+  });
+
+  this.missionChecklist.add([shade, panelBg, title, sub, closeBg, closeText, closeHit, ...rows]);
+};
+
+CampusScene.prototype.openMissionChecklist = function openMissionChecklist() {
+  this.hidePreview();
+  this.hideLadder();
+  if (this.missionChecklist) this.missionChecklist.setVisible(true);
+  this.say("Choose a mission from the list, or close it to return to campus.");
+};
+
+CampusScene.prototype.closeMissionChecklist = function closeMissionChecklist() {
+  if (this.missionChecklist) this.missionChecklist.setVisible(false);
 };
 
 CampusScene.prototype.createMina = function createMina() {
@@ -1395,15 +1519,15 @@ CampusScene.prototype.createMina = function createMina() {
 };
 
 CampusScene.prototype.createPreview = function createPreview() {
-  const width = this.scale.width - 36;
-  const top = this.scale.height - CAMPUS_BOTTOM_UI_HEIGHT - 158;
-  this.preview = this.add.container(18, top).setDepth(45).setScrollFactor(0).setVisible(false);
+  const width = this.scale.width - 24;
+  const top = this.scale.height - CAMPUS_BOTTOM_UI_HEIGHT - 184;
+  this.preview = this.add.container(12, top).setDepth(45).setScrollFactor(0).setVisible(false);
 
   const bg = this.add.graphics();
   bg.fillStyle(0xfffbf2, 0.94);
   bg.lineStyle(2.2, 0x26221f, 0.7);
-  bg.fillRoundedRect(0, 0, width, 148, 18);
-  bg.strokeRoundedRect(0, 0, width, 148, 18);
+  bg.fillRoundedRect(0, 0, width, 174, 18);
+  bg.strokeRoundedRect(0, 0, width, 174, 18);
   bg.lineStyle(1, 0xffffff, 0.82);
   bg.lineBetween(20, 12, width - 20, 12);
 
@@ -1415,15 +1539,17 @@ CampusScene.prototype.createPreview = function createPreview() {
   });
 
   const enterX = 18;
-  const enterY = 100;
+  const enterY = 106;
   const enterW = width - 36;
-  const enterH = 36;
+  const enterH = 54;
   const enterBg = this.add.graphics();
   enterBg.fillStyle(0x26221f, 0.96);
   enterBg.lineStyle(1.6, 0xffffff, 0.72);
-  enterBg.fillRoundedRect(enterX, enterY, enterW, enterH, 13);
-  enterBg.strokeRoundedRect(enterX, enterY, enterW, enterH, 13);
-  const enterText = text(this, width / 2, enterY + 9, "Enter Mission", 13, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0);
+  enterBg.fillRoundedRect(enterX, enterY, enterW, enterH, 18);
+  enterBg.strokeRoundedRect(enterX, enterY, enterW, enterH, 18);
+  enterBg.fillStyle(0xd77458, 0.22);
+  enterBg.fillRoundedRect(enterX + 10, enterY + 8, enterW - 20, 12, 6);
+  const enterText = text(this, width / 2, enterY + 17, "Enter Mission", 17, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0);
   const enterZone = this.add.zone(enterX, enterY, enterW, enterH).setOrigin(0, 0).setInteractive({
     hitArea: new Phaser.Geom.Rectangle(0, 0, enterW, enterH),
     hitAreaCallback: Phaser.Geom.Rectangle.Contains,
@@ -1612,6 +1738,7 @@ CampusScene.prototype.createLadderView = function createLadderView() {
 
 CampusScene.prototype.openLadder = function openLadder() {
   this.hidePreview();
+  this.closeMissionChecklist();
   if (this.ladderView) this.ladderView.setVisible(true);
   const targetScrollX = Phaser.Math.Clamp(this.worldWidth - this.scale.width, 0, this.worldWidth - this.scale.width);
   const targetScrollY = Phaser.Math.Clamp(this.worldHeight - this.scale.height, 0, this.worldHeight - this.scale.height);
@@ -1639,17 +1766,13 @@ CampusScene.prototype.createBottomMenu = function createBottomMenu() {
   nav.fillCircle(this.scale.width - 70, this.scale.height - 29, 36);
   nav.lineStyle(1, 0xffffff, 0.32);
   nav.lineBetween(24, this.scale.height - 48, this.scale.width - 24, this.scale.height - 48);
-  const items = [
-    ["Missions", 58],
-    ["Profile", 126],
-    ["Ladder", 194],
-    ["Perks", 262],
-    ["Guide", 330]
-  ];
+  const startX = 36;
+  const gap = (this.scale.width - 72) / 4;
+  const items = ["Missions", "Profile", "Ladder", "Perks", "Guide"].map((label, index) => [label, startX + gap * index]);
   items.forEach(([label, x]) => {
     const active = label === "Missions";
-    const hit = this.add.zone(x, this.scale.height - 28, 62, 44).setInteractive({
-      hitArea: new Phaser.Geom.Rectangle(-31, -22, 62, 44),
+    const hit = this.add.zone(x, this.scale.height - 28, 64, 52).setOrigin(0.5, 0.5).setInteractive({
+      hitArea: new Phaser.Geom.Rectangle(-32, -26, 64, 52),
       hitAreaCallback: Phaser.Geom.Rectangle.Contains,
       useHandCursor: true
     }).setDepth(54);
@@ -1663,13 +1786,25 @@ CampusScene.prototype.createBottomMenu = function createBottomMenu() {
     navIcon(this, label, x, this.scale.height - 33, active ? 0xd77458 : 0xfffbf2, 52).setScrollFactor(0);
     text(this, x, this.scale.height - 20, label, 7.2, active ? "#fff0c7" : "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(53);
     hit.on("pointerdown", () => {
-      if (label === "Guide") this.say("Tap a building, wait for Mina to arrive, then press Enter.");
+      if (label !== "Ladder") this.hideLadder();
+      if (label !== "Missions") this.closeMissionChecklist();
+      if (label === "Guide") {
+        this.hidePreview();
+        this.say("Drag the campus, tap a room, then use the large Enter Mission button.");
+      }
       if (label === "Ladder") this.openLadder();
-      if (label === "Perks") this.say("Perks unlock through EXP. Founder recaps and early access come later.");
-      if (label === "Profile") this.say("Your VIP profile is linked to your mission signals.");
+      if (label === "Perks") {
+        this.hidePreview();
+        this.say("Perks unlock through EXP: gift cards, vouchers, founder content, and lucky draws.");
+      }
+      if (label === "Profile") {
+        this.hidePreview();
+        this.say(`Profile linked. Current rank: ${getTier(this.progress.xp).name}.`);
+      }
       if (label === "Missions") {
         this.hideLadder();
-        this.say("Choose a mission room on the campus map.");
+        this.hidePreview();
+        this.openMissionChecklist();
       }
     });
   });
