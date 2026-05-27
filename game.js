@@ -1,6 +1,9 @@
 const GAME_WIDTH = 390;
 const GAME_HEIGHT = 844;
 const CAMPUS_WORLD_WIDTH = 760;
+const CAMPUS_WORLD_HEIGHT = 1040;
+const CAMPUS_TOP_UI_HEIGHT = 146;
+const CAMPUS_BOTTOM_UI_HEIGHT = 178;
 const STORAGE_KEY = "circleOfTrustPhaserProgress";
 const AMIRA_POSES = [
   { key: "amiraRight", width: 37, angle: 1.5 },
@@ -38,7 +41,7 @@ const missions = [
     time: "2 min",
     color: 0xd77458,
     x: 110,
-    y: 238,
+    y: 260,
     room: "Boxing Ring",
     prompt: "Which shoe deserves to win the next sample bout?"
   },
@@ -50,7 +53,7 @@ const missions = [
     time: "90 sec",
     color: 0x77a7c7,
     x: 328,
-    y: 206,
+    y: 198,
     room: "Atelier",
     prompt: "Stack the concepts by strongest purchase intent."
   },
@@ -62,7 +65,7 @@ const missions = [
     time: "2 min",
     color: 0xb99adf,
     x: 548,
-    y: 350,
+    y: 438,
     room: "Laboratory",
     prompt: "Find the highest comfortable buying price."
   },
@@ -74,7 +77,7 @@ const missions = [
     time: "90 sec",
     color: 0x72927d,
     x: 212,
-    y: 506,
+    y: 664,
     room: "Styling Plaza",
     prompt: "Match each shoe to the moment where it belongs."
   },
@@ -86,7 +89,7 @@ const missions = [
     time: "1 min",
     color: 0xe5bc58,
     x: 650,
-    y: 548,
+    y: 836,
     room: "Private Office",
     prompt: "Choose what the founder should do next."
   }
@@ -1024,20 +1027,36 @@ CampusScene.prototype.create = function create() {
   this.selectedMission = null;
   this.target = null;
   this.worldWidth = CAMPUS_WORLD_WIDTH;
+  const { width, height } = this.scale;
+  this.worldHeight = Math.max(CAMPUS_WORLD_HEIGHT, height + 240);
+  this.topUiHeight = CAMPUS_TOP_UI_HEIGHT;
+  this.bottomUiHeight = CAMPUS_BOTTOM_UI_HEIGHT;
   this.dragStart = null;
   this.isDraggingMap = false;
 
-  const { width, height } = this.scale;
-  this.cameras.main.setBounds(0, 0, this.worldWidth, height);
+  this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
   this.cameras.main.setScroll(0, 0);
   const params = new URLSearchParams(window.location.search);
   if (params.get("view") === "right") this.cameras.main.setScroll(this.worldWidth - width, 0);
 
-  this.add.rectangle(this.worldWidth / 2, height / 2, this.worldWidth, height, 0xbfe0a7);
-  this.add.image(this.worldWidth / 2, height / 2 - 8, "campus").setDisplaySize(this.worldWidth, height * 0.92).setAlpha(0.96);
+  this.add.rectangle(this.worldWidth / 2, this.worldHeight / 2, this.worldWidth, this.worldHeight, 0xbfe0a7);
+  this.add.image(this.worldWidth / 2, this.worldHeight / 2, "campus").setDisplaySize(this.worldWidth, this.worldHeight).setAlpha(0.96);
+  const path = this.add.graphics().setDepth(3);
+  path.lineStyle(18, 0xfff0c7, 0.22);
+  path.beginPath();
+  path.moveTo(80, 210);
+  path.lineTo(330, 220);
+  path.lineTo(548, 438);
+  path.lineTo(214, 664);
+  path.lineTo(650, 836);
+  path.strokePath();
+  path.lineStyle(3, 0xffffff, 0.38);
+  path.strokePath();
+  this.createCampusLighting();
 
   this.createHud();
   this.createQuest();
+  this.createViewportChrome();
   this.createMissionPins();
   this.createRankTotem();
   this.createPlayer();
@@ -1054,7 +1073,8 @@ CampusScene.prototype.create = function create() {
     this.dragStart = {
       x: pointer.x,
       y: pointer.y,
-      cameraX: this.cameras.main.scrollX
+      cameraX: this.cameras.main.scrollX,
+      cameraY: this.cameras.main.scrollY
     };
     this.isDraggingMap = false;
   });
@@ -1062,9 +1082,11 @@ CampusScene.prototype.create = function create() {
   this.input.on("pointermove", (pointer) => {
     if (!this.dragStart || !pointer.isDown) return;
     const dx = pointer.x - this.dragStart.x;
-    if (Math.abs(dx) < 6) return;
+    const dy = pointer.y - this.dragStart.y;
+    if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
     this.isDraggingMap = true;
     this.cameras.main.scrollX = Phaser.Math.Clamp(this.dragStart.cameraX - dx, 0, this.worldWidth - width);
+    this.cameras.main.scrollY = Phaser.Math.Clamp(this.dragStart.cameraY - dy, 0, this.worldHeight - height);
   });
 
   this.input.on("pointerup", (pointer, objects) => {
@@ -1084,13 +1106,95 @@ CampusScene.prototype.create = function create() {
 };
 
 CampusScene.prototype.isMapTouch = function isMapTouch(pointer) {
-  return pointer.y >= 150 && pointer.y <= this.scale.height - 178;
+  return pointer.y >= this.topUiHeight && pointer.y <= this.scale.height - this.bottomUiHeight;
 };
 
 CampusScene.prototype.pinHudToCamera = function pinHudToCamera() {
   this.children.each((child) => {
     if (child.depth >= 28 && child.setScrollFactor) child.setScrollFactor(0);
   });
+};
+
+CampusScene.prototype.createCampusLighting = function createCampusLighting() {
+  const ambience = this.add.graphics().setDepth(4);
+  ambience.setBlendMode(Phaser.BlendModes.ADD);
+  ambience.fillStyle(0xfff0c7, 0.12);
+  ambience.fillEllipse(132, 218, 260, 150);
+  ambience.fillStyle(0x77a7c7, 0.1);
+  ambience.fillEllipse(418, 226, 300, 170);
+  ambience.fillStyle(0xb99adf, 0.1);
+  ambience.fillEllipse(548, 448, 260, 190);
+  ambience.fillStyle(0x72927d, 0.1);
+  ambience.fillEllipse(214, 674, 280, 180);
+  ambience.fillStyle(0xe5bc58, 0.12);
+  ambience.fillEllipse(642, 834, 270, 190);
+  ambience.fillStyle(0xffffff, 0.12);
+  ambience.fillEllipse(354, 78, 430, 110);
+
+  const shade = this.add.graphics().setDepth(4.2);
+  shade.fillStyle(0x26221f, 0.06);
+  shade.fillEllipse(384, this.worldHeight - 22, this.worldWidth * 1.1, 140);
+  shade.fillStyle(0x26221f, 0.035);
+  shade.fillRect(0, this.worldHeight - 140, this.worldWidth, 140);
+
+  const glints = this.add.graphics().setDepth(5);
+  glints.setBlendMode(Phaser.BlendModes.ADD);
+  [
+    [98, 176, 7, 0xfff0c7],
+    [286, 188, 5, 0xffffff],
+    [515, 368, 8, 0xb99adf],
+    [252, 594, 6, 0x72927d],
+    [618, 760, 7, 0xe5bc58],
+    [682, 270, 5, 0x77a7c7]
+  ].forEach(([x, y, radius, color]) => {
+    glints.fillStyle(color, 0.2);
+    glints.fillCircle(x, y, radius);
+    glints.fillStyle(0xffffff, 0.26);
+    glints.fillCircle(x - radius * 0.28, y - radius * 0.28, radius * 0.38);
+  });
+
+  this.tweens.add({ targets: ambience, alpha: 0.82, yoyo: true, repeat: -1, duration: 2200, ease: "Sine.inOut" });
+};
+
+CampusScene.prototype.createHud = function createHud() {
+  const tier = getTier(this.progress.xp);
+  const percent = Math.min(1, (this.progress.xp % 100) / 100);
+  const hud = this.add.graphics().setDepth(30);
+  hud.fillStyle(0xfffbf2, 1);
+  hud.fillRect(0, 0, this.scale.width, 92);
+  hud.fillStyle(0x26221f, 1);
+  hud.fillRoundedRect(12, 12, this.scale.width - 24, 68, 22);
+  hud.fillStyle(0xffffff, 0.08);
+  hud.fillRoundedRect(22, 20, this.scale.width - 44, 20, 10);
+  hud.fillStyle(0xd77458, 0.16);
+  hud.fillCircle(this.scale.width - 82, 45, 50);
+  hud.fillStyle(0x77a7c7, 0.12);
+  hud.fillCircle(110, 76, 44);
+  hud.fillStyle(0xfff0c7, 1);
+  hud.fillRoundedRect(22, 22, 48, 48, 16);
+  hud.lineStyle(1.5, 0xffffff, 0.68);
+  hud.strokeRoundedRect(22, 22, 48, 48, 16);
+  hud.lineStyle(2, 0x26221f, 0.18);
+  hud.lineBetween(0, 91, this.scale.width, 91);
+  hud.lineStyle(1, 0xffffff, 0.5);
+  hud.lineBetween(20, 13, this.scale.width - 20, 13);
+  this.add.image(46, 54, "amiraFront").setDisplaySize(27, 50).setDepth(31);
+  text(this, 82, 21, "Amira", 17, "#ffffff", { weight: "900" }).setDepth(31);
+  text(this, 82, 45, tier.name, 9.5, "#fff0c7", {
+    weight: "900",
+    wordWrap: { width: this.scale.width - 196 }
+  }).setDepth(31);
+  const xpPill = this.add.graphics().setDepth(31);
+  xpPill.fillStyle(0xfffbf2, 1);
+  xpPill.fillRoundedRect(this.scale.width - 116, 22, 92, 26, 13);
+  xpPill.lineStyle(1.4, 0xe5bc58, 0.8);
+  xpPill.strokeRoundedRect(this.scale.width - 116, 22, 92, 26, 13);
+  text(this, this.scale.width - 70, 28, `${this.progress.xp} XP`, 12, "#d77458", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(32);
+  const bar = this.add.graphics().setDepth(31);
+  bar.fillStyle(0xffffff, 1);
+  bar.fillRoundedRect(this.scale.width - 116, 54, 92, 12, 6);
+  const fill = this.add.graphics().setDepth(32);
+  fill.fillStyle(0xe5bc58, 1).fillRoundedRect(this.scale.width - 112, 57, 84 * percent, 6, 3);
 };
 
 CampusScene.prototype.createPlayer = function createPlayer() {
@@ -1127,7 +1231,9 @@ CampusScene.prototype.createControls = function createControls() {
 CampusScene.prototype.createMissionPins = function createMissionPins() {
   this.pins = missions.map((mission) => {
     const container = this.add.container(mission.x, mission.y).setDepth(10);
+    const cast = this.add.ellipse(4, 47, 110, 26, 0x26221f, 0.16);
     const glow = this.add.circle(0, 0, 34, mission.color, 0.16);
+    glow.setBlendMode(Phaser.BlendModes.ADD);
     const post = this.add.rectangle(0, 24, 7, 34, 0x6f655c, 0.8).setOrigin(0.5, 0);
     const marker = this.add.circle(0, 0, 9, mission.color, 0.98).setStrokeStyle(2.5, 0xfffbf2);
     const labelBg = this.add.graphics();
@@ -1135,8 +1241,10 @@ CampusScene.prototype.createMissionPins = function createMissionPins() {
     labelBg.lineStyle(2.2, 0x26221f, 0.72);
     labelBg.fillRoundedRect(-58, 17, 116, 32, 8);
     labelBg.strokeRoundedRect(-58, 17, 116, 32, 8);
-    labelBg.lineStyle(1, 0xffffff, 0.72);
-    labelBg.lineBetween(-44, 23, 44, 23);
+    labelBg.fillStyle(0xffffff, 0.42);
+    labelBg.fillRoundedRect(-50, 21, 100, 8, 4);
+    labelBg.lineStyle(1, mission.color, 0.3);
+    labelBg.lineBetween(-44, 44, 44, 44);
     const title = text(this, 0, 24, mission.title, 9, "#26221f", {
       weight: "900",
       align: "center",
@@ -1144,7 +1252,7 @@ CampusScene.prototype.createMissionPins = function createMissionPins() {
     }).setOrigin(0.5, 0);
     const bang = this.add.circle(52, 16, 10, this.progress.completed.includes(mission.id) ? 0x72927d : 0xd77458).setStrokeStyle(1.5, 0xfffbf2);
     const bangText = text(this, 52, 9, this.progress.completed.includes(mission.id) ? "✓" : "!", 12, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
-    container.add([glow, post, marker, labelBg, title, bang, bangText]);
+    container.add([cast, glow, post, marker, labelBg, title, bang, bangText]);
     container.setSize(126, 86).setInteractive(new Phaser.Geom.Rectangle(-63, -12, 126, 88), Phaser.Geom.Rectangle.Contains);
     container.on("pointerdown", () => this.goToMission(mission));
     this.tweens.add({ targets: glow, alpha: 0.32, scale: 1.08, yoyo: true, repeat: -1, duration: 900, ease: "Sine.inOut" });
@@ -1155,7 +1263,7 @@ CampusScene.prototype.createMissionPins = function createMissionPins() {
 
 CampusScene.prototype.createRankTotem = function createRankTotem() {
   const x = this.worldWidth - 76;
-  const baseY = this.scale.height - 214;
+  const baseY = this.worldHeight - 214;
   const currentIndex = getTierIndex(this.progress.xp);
   const monument = this.add.container(0, 0).setDepth(8);
   const backGlow = this.add.ellipse(x, baseY - 116, 150, 300, 0xfff0c7, 0.17);
@@ -1222,34 +1330,64 @@ CampusScene.prototype.createRankTotem = function createRankTotem() {
 CampusScene.prototype.createQuest = function createQuest() {
   const mission = nextMission(this.progress);
   const strip = this.add.graphics().setDepth(28);
-  strip.fillStyle(0xfffbf2, 0.78);
-  strip.lineStyle(1.1, 0xffffff, 0.7);
-  strip.fillRoundedRect(18, 102, this.scale.width - 36, 38, 13);
-  strip.strokeRoundedRect(18, 102, this.scale.width - 36, 38, 13);
-  text(this, 34, 113, "NEXT", 10, "#d77458", { weight: "900" }).setDepth(29);
-  this.questText = text(this, 76, 109, `${mission.title}: ${mission.short}`, 13, "#26221f", {
+  strip.fillStyle(0xfffbf2, 1);
+  strip.fillRect(0, 92, this.scale.width, CAMPUS_TOP_UI_HEIGHT - 92);
+  strip.fillStyle(0xfff0c7, 1);
+  strip.fillRoundedRect(14, 102, this.scale.width - 28, 34, 15);
+  strip.fillStyle(0xffffff, 0.72);
+  strip.fillRoundedRect(20, 108, this.scale.width - 40, 10, 5);
+  strip.lineStyle(2, 0x26221f, 0.18);
+  strip.lineBetween(0, CAMPUS_TOP_UI_HEIGHT - 1, this.scale.width, CAMPUS_TOP_UI_HEIGHT - 1);
+  strip.lineStyle(1.4, 0x26221f, 0.22);
+  strip.strokeRoundedRect(14, 102, this.scale.width - 28, 34, 15);
+  text(this, 30, 113, "NEXT", 9, "#d77458", { weight: "900" }).setDepth(29);
+  this.questText = text(this, 76, 109, `${mission.title}: ${mission.short}`, 12.5, "#26221f", {
     weight: "900",
     wordWrap: { width: this.scale.width - 104 }
   }).setDepth(29);
 };
 
+CampusScene.prototype.createViewportChrome = function createViewportChrome() {
+  const frame = this.add.graphics().setDepth(27).setScrollFactor(0);
+  const top = CAMPUS_TOP_UI_HEIGHT;
+  const bottom = this.scale.height - CAMPUS_BOTTOM_UI_HEIGHT;
+  frame.lineStyle(2, 0xffffff, 0.78);
+  frame.lineBetween(0, top + 1, this.scale.width, top + 1);
+  frame.lineStyle(2, 0x26221f, 0.13);
+  frame.lineBetween(0, bottom - 1, this.scale.width, bottom - 1);
+  frame.fillStyle(0x26221f, 0.1);
+  frame.fillRect(0, top, this.scale.width, 8);
+  frame.fillStyle(0xffffff, 0.16);
+  frame.fillRect(0, bottom - 8, this.scale.width, 8);
+};
+
 CampusScene.prototype.createMina = function createMina() {
   const speech = this.add.graphics().setDepth(39);
-  const y = this.scale.height - 172;
-  speech.fillStyle(0xfffbf2, 0.9);
-  speech.lineStyle(2.4, 0x26221f, 0.76);
-  speech.fillRoundedRect(14, y, this.scale.width - 28, 64, 18);
-  speech.strokeRoundedRect(14, y, this.scale.width - 28, 64, 18);
+  const y = this.scale.height - CAMPUS_BOTTOM_UI_HEIGHT;
+  speech.fillStyle(0xfffbf2, 1);
+  speech.fillRect(0, y, this.scale.width, CAMPUS_BOTTOM_UI_HEIGHT);
+  speech.lineStyle(2, 0x26221f, 0.18);
+  speech.lineBetween(0, y, this.scale.width, y);
+  speech.fillStyle(0xfff0c7, 1);
+  speech.lineStyle(2, 0x26221f, 0.34);
+  speech.fillRoundedRect(14, y + 10, this.scale.width - 28, 62, 20);
+  speech.strokeRoundedRect(14, y + 10, this.scale.width - 28, 62, 20);
+  speech.fillStyle(0xd77458, 0.08);
+  speech.fillCircle(this.scale.width - 64, y + 44, 50);
+  speech.fillStyle(0x77a7c7, 0.07);
+  speech.fillCircle(60, y + 70, 38);
+  speech.fillStyle(0xffffff, 0.52);
+  speech.fillRoundedRect(88, y + 19, this.scale.width - 124, 12, 6);
   speech.fillPoints([
-    new Phaser.Geom.Point(58, y + 64),
-    new Phaser.Geom.Point(78, y + 64),
-    new Phaser.Geom.Point(64, y + 82)
+    new Phaser.Geom.Point(58, y + 72),
+    new Phaser.Geom.Point(78, y + 72),
+    new Phaser.Geom.Point(64, y + 88)
   ], true);
-  speech.lineBetween(58, y + 64, 64, y + 82);
-  speech.lineBetween(64, y + 82, 78, y + 64);
-  screenTone(this, 88, y + 10, this.scale.width - 122, 42, 0xd77458, 0.07).setDepth(40).setScrollFactor(0);
-  this.add.image(50, y + 36, "minaConfident").setDisplaySize(48, 48).setDepth(41);
-  this.minaText = text(this, 82, y + 16, "I am Mina. Drag the campus, then tap a mission room.", 12, "#26221f", {
+  speech.lineBetween(58, y + 72, 64, y + 88);
+  speech.lineBetween(64, y + 88, 78, y + 72);
+  this.add.circle(50, y + 42, 25, 0xfffbf2, 1).setStrokeStyle(1.4, 0xd77458, 0.44).setDepth(40);
+  this.add.image(50, y + 44, "minaConfident").setDisplaySize(46, 46).setDepth(41);
+  this.minaText = text(this, 84, y + 25, "Drag the campus in any direction. Tap a mission room when you are ready.", 11.5, "#26221f", {
     weight: "900",
     wordWrap: { width: this.scale.width - 118 }
   }).setDepth(41);
@@ -1308,29 +1446,40 @@ CampusScene.prototype.createLadderView = function createLadderView() {
 
   this.ladderView = this.add.container(0, 0).setDepth(60).setScrollFactor(0).setVisible(false);
 
-  const shade = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x171412, 0.42).setOrigin(0, 0);
+  const shade = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x171412, 0.48).setOrigin(0, 0);
   shade.setInteractive(new Phaser.Geom.Rectangle(0, 0, this.scale.width, this.scale.height), Phaser.Geom.Rectangle.Contains);
   const bg = this.add.graphics();
-  bg.fillStyle(0xfffbf2, 0.98);
-  bg.lineStyle(3, 0x26221f, 0.76);
+  bg.fillStyle(0x1f1b19, 0.98);
+  bg.lineStyle(3, 0xfff0c7, 0.72);
   bg.fillRoundedRect(x, y, width, height, 24);
   bg.strokeRoundedRect(x, y, width, height, 24);
-  bg.fillStyle(0x26221f, 0.92);
-  bg.fillRoundedRect(x + 10, y + 10, width - 20, 84, 20);
-  bg.fillStyle(0xd77458, 0.9);
-  bg.fillRoundedRect(x + 24, y + 80, width - 48, 5, 3);
-  bg.fillStyle(0xe5bc58, 0.18);
-  bg.fillCircle(x + width - 76, y + 52, 48);
-  bg.fillStyle(0xffffff, 0.12);
-  bg.fillCircle(x + width - 58, y + 40, 28);
-  const headerTone = screenTone(this, x + 18, y + 18, width - 36, 66, 0xffffff, 0.06);
+  bg.fillStyle(0xd77458, 0.18);
+  bg.fillCircle(x + 42, y + 64, 82);
+  bg.fillStyle(0x77a7c7, 0.13);
+  bg.fillCircle(x + width - 46, y + 142, 92);
+  bg.fillStyle(0xe5bc58, 0.12);
+  bg.fillCircle(x + width - 68, y + height - 90, 106);
+  bg.fillStyle(0xfffbf2, 0.08);
+  bg.fillRoundedRect(x + 12, y + 12, width - 24, 86, 22);
+  bg.lineStyle(1, 0xffffff, 0.18);
+  bg.lineBetween(x + 28, y + 24, x + width - 28, y + 24);
+  bg.fillStyle(0xd77458, 0.86);
+  bg.fillRoundedRect(x + 26, y + 83, width - 52, 5, 3);
+  const headerTone = screenTone(this, x + 16, y + 14, width - 32, 78, 0xffffff, 0.05);
 
-  const title = text(this, x + 26, y + 24, "Inner Circle", 24, "#ffffff", { weight: "900" });
-  const sub = text(this, x + 26, y + 56, `${currentTier.name} | ${this.progress.xp} XP`, 11, "#fff0c7", {
+  const title = text(this, x + 26, y + 25, "Ascension Path", 22, "#ffffff", { weight: "900" });
+  const sub = text(this, x + 26, y + 55, `${currentTier.name} | ${this.progress.xp} XP`, 10.5, "#fff0c7", {
     weight: "900",
-    wordWrap: { width: width - 112 }
+    wordWrap: { width: width - 116 }
   });
-  const crown = this.add.star(x + width - 63, y + 50, 7, 10, 22, 0xe5bc58, 0.96).setStrokeStyle(2, 0xfffbf2, 0.78);
+  const progressShell = this.add.graphics();
+  progressShell.fillStyle(0xfffbf2, 0.14);
+  progressShell.fillRoundedRect(x + 26, y + 102, width - 52, 14, 7);
+  progressShell.lineStyle(1, 0xffffff, 0.22);
+  progressShell.strokeRoundedRect(x + 26, y + 102, width - 52, 14, 7);
+  progressShell.fillStyle(0xe5bc58, 0.96);
+  progressShell.fillRoundedRect(x + 30, y + 106, (width - 60) * progressRatio, 6, 3);
+  const crown = this.add.star(x + width - 58, y + 54, 7, 11, 24, 0xe5bc58, 0.98).setStrokeStyle(2, 0xfffbf2, 0.78);
   const closeBg = this.add.graphics();
   closeBg.fillStyle(0xfffbf2, 0.18);
   closeBg.lineStyle(1.4, 0xfffbf2, 0.45);
@@ -1344,59 +1493,99 @@ CampusScene.prototype.createLadderView = function createLadderView() {
   });
   closeZone.on("pointerdown", () => this.hideLadder());
 
-  const pathX = x + 60;
-  const topY = y + 134;
-  const bottomY = y + height - 118;
-  const pathH = bottomY - topY;
-  const stepGap = pathH / (tiers.length - 1);
+  const pathTop = y + 154;
+  const pathBottom = y + height - 124;
+  const pathH = pathBottom - pathTop;
+  const pathPoints = tiers.map((tier, index) => {
+    const t = index / (tiers.length - 1);
+    return {
+      x: x + 66 + (index % 2) * 44,
+      y: pathBottom - pathH * t
+    };
+  });
   const track = this.add.graphics();
-  track.lineStyle(10, 0xeadfce, 0.96);
-  track.lineBetween(pathX, topY, pathX, bottomY);
-  track.lineStyle(10, 0xd77458, 0.88);
-  track.lineBetween(pathX, bottomY, pathX, bottomY - pathH * progressRatio);
-  track.lineStyle(2, 0xffffff, 0.62);
-  track.lineBetween(pathX - 2, bottomY, pathX - 2, bottomY - pathH * progressRatio);
+  track.lineStyle(13, 0xfffbf2, 0.16);
+  pathPoints.forEach((point, index) => {
+    if (!index) return;
+    const prev = pathPoints[index - 1];
+    track.lineBetween(prev.x, prev.y, point.x, point.y);
+  });
+  track.lineStyle(7, 0xd77458, 0.82);
+  pathPoints.forEach((point, index) => {
+    if (!index || index > currentIndex) return;
+    const prev = pathPoints[index - 1];
+    track.lineBetween(prev.x, prev.y, point.x, point.y);
+  });
+  track.lineStyle(2, 0xffffff, 0.42);
+  pathPoints.forEach((point, index) => {
+    if (!index || index > currentIndex) return;
+    const prev = pathPoints[index - 1];
+    track.lineBetween(prev.x - 2, prev.y - 2, point.x - 2, point.y - 2);
+  });
   const rungItems = [];
 
-  tiers.slice().reverse().forEach((tier, reversedIndex) => {
-    const tierIndex = tiers.length - 1 - reversedIndex;
-    const rowY = topY + reversedIndex * stepGap;
+  tiers.forEach((tier, tierIndex) => {
+    const point = pathPoints[tierIndex];
     const reached = tierIndex <= currentIndex;
     const active = tierIndex === currentIndex;
     const meta = RANK_META[tierIndex];
     const block = this.add.graphics();
+    const cardX = x + 126;
+    const cardY = point.y - 28;
+    const cardW = width - 156;
+    const cardH = active ? 60 : 52;
     if (active) {
       block.fillStyle(0xe5bc58, 0.18);
-      block.fillRoundedRect(x + 32, rowY - 25, width - 64, 52, 18);
+      block.fillRoundedRect(x + 34, point.y - 36, width - 62, 72, 22);
+      block.fillStyle(meta.color, 0.18);
+      block.fillCircle(point.x, point.y, 42);
     }
-    block.fillStyle(reached ? meta.color : 0xffffff, reached ? 0.96 : 0.78);
-    block.lineStyle(active ? 3 : 1.4, active ? 0xe5bc58 : 0x26221f, active ? 0.95 : 0.18);
-    block.fillCircle(pathX, rowY, active ? 24 : 19);
-    block.strokeCircle(pathX, rowY, active ? 24 : 19);
+    block.fillStyle(reached ? meta.color : 0xfffbf2, reached ? 0.98 : 0.28);
+    block.lineStyle(active ? 3 : 1.4, active ? 0xe5bc58 : 0xfffbf2, active ? 0.95 : 0.32);
+    if (tierIndex >= 4) {
+      block.fillRoundedRect(point.x - 24, point.y - 24, 48, 48, 13);
+      block.strokeRoundedRect(point.x - 24, point.y - 24, 48, 48, 13);
+    } else {
+      block.fillCircle(point.x, point.y, active ? 25 : 20);
+      block.strokeCircle(point.x, point.y, active ? 25 : 20);
+    }
     block.fillStyle(0xffffff, reached ? 0.22 : 0.5);
-    block.fillCircle(pathX - 6, rowY - 7, active ? 8 : 6);
-    block.fillStyle(active ? 0xfff0c7 : meta.accent, active ? 0.92 : 0.74);
-    block.lineStyle(active ? 2 : 1, active ? 0xe5bc58 : 0x26221f, active ? 0.8 : 0.14);
-    block.fillRoundedRect(x + 94, rowY - 23, width - 128, 46, 14);
-    block.strokeRoundedRect(x + 94, rowY - 23, width - 128, 46, 14);
-    const icon = reached ? "OK" : `${tierIndex + 1}`;
-    const badge = text(this, pathX, rowY - 7, icon, reached ? 8 : 12, reached ? "#ffffff" : "#6f655c", {
+    block.fillCircle(point.x - 7, point.y - 8, active ? 8 : 6);
+    block.fillStyle(active ? 0xfff0c7 : reached ? meta.accent : 0xfffbf2, active ? 0.97 : reached ? 0.86 : 0.16);
+    block.lineStyle(active ? 2 : 1, active ? 0xe5bc58 : 0xfffbf2, active ? 0.88 : 0.22);
+    block.fillRoundedRect(cardX, cardY, cardW, cardH, 16);
+    block.strokeRoundedRect(cardX, cardY, cardW, cardH, 16);
+    block.fillStyle(0xffffff, active ? 0.34 : 0.16);
+    block.fillRoundedRect(cardX + 12, cardY + 8, cardW - 24, 8, 4);
+    const icon = reached ? "ON" : "LOCK";
+    const badge = text(this, point.x, point.y - 7, icon, reached ? 7.5 : 6.5, reached ? "#ffffff" : "#fff0c7", {
       weight: "900",
       align: "center"
     }).setOrigin(0.5, 0);
-    const name = text(this, x + 110, rowY - 17, tier.name, tier.name.length > 22 ? 11 : 12, active ? "#26221f" : "#453f39", {
+    const name = text(this, cardX + 14, cardY + 13, tier.name, tier.name.length > 22 ? 10.5 : 11.5, active ? "#26221f" : reached ? "#453f39" : "#fff0c7", {
       weight: "900",
-      wordWrap: { width: width - 146 }
+      wordWrap: { width: cardW - 28 }
     });
-    const xp = text(this, x + 110, rowY + 4, `${tier.xp} XP - ${meta.perk}`, 8.2, reached ? "#d77458" : "#756b62", {
+    const xp = text(this, cardX + 14, cardY + 34, `${tier.xp} XP - ${meta.short}`, 8.2, active ? "#d77458" : reached ? "#756b62" : "#d7c9b6", {
       weight: "900",
-      wordWrap: { width: width - 146 }
+      wordWrap: { width: cardW - 28 }
     });
+    const reward = this.add.graphics();
+    reward.fillStyle(reached ? 0xe5bc58 : 0x6f655c, reached ? 0.94 : 0.42);
+    reward.lineStyle(1.2, reached ? 0xfffbf2 : 0xfffbf2, reached ? 0.8 : 0.28);
+    reward.fillRoundedRect(cardX + cardW - 34, cardY + cardH - 26, 22, 18, 5);
+    reward.strokeRoundedRect(cardX + cardW - 34, cardY + cardH - 26, 22, 18, 5);
+    reward.lineBetween(cardX + cardW - 23, cardY + cardH - 26, cardX + cardW - 23, cardY + cardH - 8);
+    reward.lineBetween(cardX + cardW - 34, cardY + cardH - 18, cardX + cardW - 12, cardY + cardH - 18);
     rungItems.push(block, badge, name, xp);
+    rungItems.push(reward);
     if (active) {
-      const glow = this.add.circle(pathX, rowY, 34, 0xe5bc58, 0.16);
+      const glow = this.add.circle(point.x, point.y, 42, 0xe5bc58, 0.16);
+      glow.setBlendMode(Phaser.BlendModes.ADD);
       this.tweens.add({ targets: glow, alpha: 0.34, scale: 1.08, yoyo: true, repeat: -1, duration: 900, ease: "Sine.inOut" });
       rungItems.push(glow);
+      const avatar = this.add.image(point.x - 36, point.y + 4, "amiraFront").setDisplaySize(21, 40);
+      rungItems.push(avatar);
     }
   });
 
@@ -1424,7 +1613,8 @@ CampusScene.prototype.openLadder = function openLadder() {
   this.hidePreview();
   if (this.ladderView) this.ladderView.setVisible(true);
   const targetScrollX = Phaser.Math.Clamp(this.worldWidth - this.scale.width, 0, this.worldWidth - this.scale.width);
-  this.tweens.add({ targets: this.cameras.main, scrollX: targetScrollX, duration: 420, ease: "Sine.easeInOut" });
+  const targetScrollY = Phaser.Math.Clamp(this.worldHeight - this.scale.height, 0, this.worldHeight - this.scale.height);
+  this.tweens.add({ targets: this.cameras.main, scrollX: targetScrollX, scrollY: targetScrollY, duration: 420, ease: "Sine.easeInOut" });
   this.say("This is your VIP Rank Totem. Complete missions to climb toward Market Oracle.");
 };
 
@@ -1434,12 +1624,20 @@ CampusScene.prototype.hideLadder = function hideLadder() {
 
 CampusScene.prototype.createBottomMenu = function createBottomMenu() {
   const nav = this.add.graphics().setDepth(50);
-  nav.fillStyle(0xfffbf2, 0.92);
-  nav.lineStyle(2.2, 0x26221f, 0.64);
-  nav.fillRoundedRect(14, this.scale.height - 86, this.scale.width - 28, 64, 16);
-  nav.strokeRoundedRect(14, this.scale.height - 86, this.scale.width - 28, 64, 16);
-  nav.lineStyle(1, 0xffffff, 0.8);
-  nav.lineBetween(34, this.scale.height - 76, this.scale.width - 34, this.scale.height - 76);
+  nav.fillStyle(0xfffbf2, 1);
+  nav.fillRect(0, this.scale.height - 92, this.scale.width, 92);
+  nav.lineStyle(2, 0x26221f, 0.16);
+  nav.lineBetween(0, this.scale.height - 92, this.scale.width, this.scale.height - 92);
+  nav.fillStyle(0x26221f, 1);
+  nav.fillRoundedRect(12, this.scale.height - 78, this.scale.width - 24, 58, 20);
+  nav.fillStyle(0xffffff, 0.08);
+  nav.fillRoundedRect(22, this.scale.height - 70, this.scale.width - 44, 10, 5);
+  nav.fillStyle(0xd77458, 0.14);
+  nav.fillCircle(56, this.scale.height - 50, 42);
+  nav.fillStyle(0x77a7c7, 0.1);
+  nav.fillCircle(this.scale.width - 70, this.scale.height - 46, 50);
+  nav.lineStyle(1, 0xffffff, 0.32);
+  nav.lineBetween(28, this.scale.height - 77, this.scale.width - 28, this.scale.height - 77);
   const items = [
     ["Missions", 58],
     ["Profile", 126],
@@ -1449,11 +1647,21 @@ CampusScene.prototype.createBottomMenu = function createBottomMenu() {
   ];
   items.forEach(([label, x]) => {
     const active = label === "Missions";
-    const circle = this.add.circle(x, this.scale.height - 58, 15, active ? 0xfff0c7 : 0xffffff, active ? 0.98 : 0.58).setStrokeStyle(1.5, active ? 0xd77458 : 0x26221f, active ? 0.95 : 0.38).setDepth(51);
-    navIcon(this, label, x, this.scale.height - 58, active ? 0xd77458 : 0x26221f, 52).setScrollFactor(0);
-    text(this, x, this.scale.height - 41, label, 9, "#26221f", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(51);
-    circle.setInteractive();
-    circle.on("pointerdown", () => {
+    const hit = this.add.zone(x, this.scale.height - 50, 62, 54).setInteractive({
+      hitArea: new Phaser.Geom.Rectangle(-31, -27, 62, 54),
+      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      useHandCursor: true
+    }).setDepth(54);
+    if (active) {
+      const activeBg = this.add.graphics().setDepth(51);
+      activeBg.fillStyle(0xfff0c7, 1);
+      activeBg.fillRoundedRect(x - 27, this.scale.height - 70, 54, 38, 15);
+      activeBg.lineStyle(1.3, 0xe5bc58, 0.82);
+      activeBg.strokeRoundedRect(x - 27, this.scale.height - 70, 54, 38, 15);
+    }
+    navIcon(this, label, x, this.scale.height - 56, active ? 0xd77458 : 0xfffbf2, 52).setScrollFactor(0);
+    text(this, x, this.scale.height - 39, label, 8.6, active ? "#fff0c7" : "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(53);
+    hit.on("pointerdown", () => {
       if (label === "Guide") this.say("Tap a building, wait for Mina to arrive, then press Enter.");
       if (label === "Ladder") this.openLadder();
       if (label === "Perks") this.say("Perks unlock through EXP. Founder recaps and early access come later.");
@@ -1469,12 +1677,14 @@ CampusScene.prototype.createBottomMenu = function createBottomMenu() {
 CampusScene.prototype.moveTo = function moveTo(x, y, onComplete) {
   this.tweens.killTweensOf([this.player, this.playerShadow]);
   const clampedX = Phaser.Math.Clamp(x, 34, this.worldWidth - 34);
-  const clampedY = Phaser.Math.Clamp(y, 120, this.scale.height - 190);
+  const clampedY = Phaser.Math.Clamp(y, 120, this.worldHeight - 90);
   const pose = this.setPlayerDirection(clampedX, clampedY);
   const shadowY = clampedY + 30;
   const duration = Phaser.Math.Distance.Between(this.player.x, this.player.y, clampedX, clampedY) * 4.3;
   const safeDuration = Phaser.Math.Clamp(duration, 220, 1200);
+  const viewHeight = this.scale.height - this.topUiHeight - this.bottomUiHeight;
   const targetScrollX = Phaser.Math.Clamp(clampedX - this.scale.width / 2, 0, this.worldWidth - this.scale.width);
+  const targetScrollY = Phaser.Math.Clamp(clampedY - this.topUiHeight - viewHeight / 2, 0, this.worldHeight - this.scale.height);
   this.player.setScale(1);
   this.player.setAngle(pose?.angle || 0);
   this.player.setDisplaySize(pose.width, this.playerBaseHeight);
@@ -1507,6 +1717,7 @@ CampusScene.prototype.moveTo = function moveTo(x, y, onComplete) {
   this.tweens.add({
     targets: this.cameras.main,
     scrollX: targetScrollX,
+    scrollY: targetScrollY,
     duration: safeDuration,
     ease: "Sine.easeInOut"
   });
