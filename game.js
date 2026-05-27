@@ -117,6 +117,10 @@ function getTier(xp) {
   return tiers.reduce((current, tier) => (xp >= tier.xp ? tier : current), tiers[0]);
 }
 
+function getTierIndex(xp) {
+  return tiers.reduce((current, tier, index) => (xp >= tier.xp ? index : current), 0);
+}
+
 function nextMission(progress) {
   return missions.find((mission) => !progress.completed.includes(mission.id)) || missions[0];
 }
@@ -904,9 +908,11 @@ CampusScene.prototype.create = function create() {
   this.createHud();
   this.createQuest();
   this.createMissionPins();
+  this.createRankTotem();
   this.createPlayer();
   this.createMina();
   this.createPreview();
+  this.createLadderView();
   this.createBottomMenu();
   this.createControls();
   this.pinHudToCamera();
@@ -939,6 +945,7 @@ CampusScene.prototype.create = function create() {
     if (!shouldWalk) return;
     this.moveTo(pointer.worldX, pointer.worldY);
     this.hidePreview();
+    this.hideLadder();
     this.say("Drag the campus to explore. Tap a mission room and I will walk you there.");
   });
 
@@ -1015,6 +1022,44 @@ CampusScene.prototype.createMissionPins = function createMissionPins() {
   });
 };
 
+CampusScene.prototype.createRankTotem = function createRankTotem() {
+  const x = this.worldWidth - 70;
+  const baseY = this.scale.height - 236;
+  const currentIndex = getTierIndex(this.progress.xp);
+  const colors = [0xd77458, 0x77a7c7, 0x72927d, 0xe5bc58, 0xb99adf, 0x26221f];
+
+  const ground = this.add.ellipse(x, baseY + 42, 110, 22, 0x26221f, 0.14).setDepth(8);
+  const mast = this.add.rectangle(x, baseY - 96, 12, 244, 0x6f655c, 0.82).setDepth(8.2);
+  const cap = this.add.star(x, baseY - 232, 5, 10, 21, 0xe5bc58, 0.96).setStrokeStyle(2, 0xfffbf2).setDepth(10);
+  this.rankTotem = this.add.container(0, 0, [ground, mast, cap]).setDepth(8);
+
+  tiers.forEach((tier, index) => {
+    const y = baseY - index * 39;
+    const reached = index <= currentIndex;
+    const block = this.add.graphics().setDepth(9 + index / 10);
+    block.fillStyle(reached ? colors[index] : 0xfffbf2, reached ? 0.94 : 0.74);
+    block.lineStyle(reached ? 2.4 : 1.4, reached ? 0xfffbf2 : 0x26221f, reached ? 0.92 : 0.42);
+    block.fillRoundedRect(x - 54, y - 20, 108, 30, 9);
+    block.strokeRoundedRect(x - 54, y - 20, 108, 30, 9);
+    block.lineStyle(1, 0xffffff, reached ? 0.74 : 0.42);
+    block.lineBetween(x - 42, y - 14, x + 42, y - 14);
+    text(this, x, y - 13, tier.name.replace(" ", "\n"), index >= 4 ? 6.2 : 7, reached ? "#ffffff" : "#26221f", {
+      weight: "900",
+      align: "center",
+      wordWrap: { width: 86 }
+    }).setOrigin(0.5, 0).setDepth(10 + index / 10);
+  });
+
+  const sign = this.add.graphics().setDepth(12);
+  sign.fillStyle(0xfffbf2, 0.92);
+  sign.lineStyle(2, 0x26221f, 0.7);
+  sign.fillRoundedRect(x - 58, baseY + 52, 116, 34, 9);
+  sign.strokeRoundedRect(x - 58, baseY + 52, 116, 34, 9);
+  text(this, x, baseY + 61, "Rank Ladder", 11, "#26221f", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(13);
+  const zone = this.add.zone(x, baseY - 80, 128, 330).setInteractive({ useHandCursor: true }).setDepth(14);
+  zone.on("pointerdown", () => this.openLadder());
+};
+
 CampusScene.prototype.createQuest = function createQuest() {
   const mission = nextMission(this.progress);
   const strip = this.add.graphics().setDepth(28);
@@ -1053,14 +1098,14 @@ CampusScene.prototype.createMina = function createMina() {
 
 CampusScene.prototype.createPreview = function createPreview() {
   const width = this.scale.width - 36;
-  const top = this.scale.height - 318;
+  const top = this.scale.height - 342;
   this.preview = this.add.container(18, top).setDepth(45).setScrollFactor(0).setVisible(false);
 
   const bg = this.add.graphics();
   bg.fillStyle(0xfffbf2, 0.94);
   bg.lineStyle(2.2, 0x26221f, 0.7);
-  bg.fillRoundedRect(0, 0, width, 124, 18);
-  bg.strokeRoundedRect(0, 0, width, 124, 18);
+  bg.fillRoundedRect(0, 0, width, 148, 18);
+  bg.strokeRoundedRect(0, 0, width, 148, 18);
   bg.lineStyle(1, 0xffffff, 0.82);
   bg.lineBetween(20, 12, width - 20, 12);
 
@@ -1068,21 +1113,129 @@ CampusScene.prototype.createPreview = function createPreview() {
   this.previewMeta = text(this, 18, 45, "", 11, "#d77458", { weight: "900" });
   this.previewBody = text(this, 18, 68, "", 12, "#6f655c", {
     weight: "800",
-    wordWrap: { width: width - 140 }
+    wordWrap: { width: width - 36 }
   });
 
+  const enterX = 18;
+  const enterY = 100;
+  const enterW = width - 36;
+  const enterH = 36;
   const enterBg = this.add.graphics();
   enterBg.fillStyle(0x26221f, 0.96);
   enterBg.lineStyle(1.6, 0xffffff, 0.72);
-  enterBg.fillRoundedRect(width - 114, 72, 94, 38, 14);
-  enterBg.strokeRoundedRect(width - 114, 72, 94, 38, 14);
-  const enterText = text(this, width - 67, 82, "Enter", 14, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0);
-  const enterZone = this.add.zone(width - 67, 91, 104, 48).setInteractive({ useHandCursor: true });
-  enterZone.on("pointerdown", () => {
-    if (this.selectedMission) this.scene.start("MissionScene", { mission: this.selectedMission });
+  enterBg.fillRoundedRect(enterX, enterY, enterW, enterH, 13);
+  enterBg.strokeRoundedRect(enterX, enterY, enterW, enterH, 13);
+  const enterText = text(this, width / 2, enterY + 9, "Enter Mission", 13, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0);
+  const enterZone = this.add.zone(enterX, enterY, enterW, enterH).setOrigin(0, 0).setInteractive({
+    hitArea: new Phaser.Geom.Rectangle(0, 0, enterW, enterH),
+    hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+    useHandCursor: true
   });
+  enterZone.on("pointerdown", () => this.enterMission());
 
   this.preview.add([bg, this.previewTitle, this.previewMeta, this.previewBody, enterBg, enterText, enterZone]);
+};
+
+CampusScene.prototype.createLadderView = function createLadderView() {
+  const width = this.scale.width - 28;
+  const height = Math.min(620, this.scale.height - 148);
+  const x = 14;
+  const y = 82;
+  const currentIndex = getTierIndex(this.progress.xp);
+  const currentTier = tiers[currentIndex];
+  const nextTier = tiers[currentIndex + 1];
+  const colors = [0xd77458, 0x77a7c7, 0x72927d, 0xe5bc58, 0xb99adf, 0x26221f];
+
+  this.ladderView = this.add.container(0, 0).setDepth(60).setScrollFactor(0).setVisible(false);
+
+  const shade = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x26221f, 0.28).setOrigin(0, 0);
+  shade.setInteractive(new Phaser.Geom.Rectangle(0, 0, this.scale.width, this.scale.height), Phaser.Geom.Rectangle.Contains);
+  const bg = this.add.graphics();
+  bg.fillStyle(0xfffbf2, 0.97);
+  bg.lineStyle(2.4, 0x26221f, 0.72);
+  bg.fillRoundedRect(x, y, width, height, 20);
+  bg.strokeRoundedRect(x, y, width, height, 20);
+  bg.lineStyle(1, 0xffffff, 0.82);
+  bg.lineBetween(x + 20, y + 16, x + width - 20, y + 16);
+  const headerTone = screenTone(this, x + 14, y + 14, width - 28, 58, 0xd77458, 0.08);
+
+  const title = text(this, x + 22, y + 24, "VIP Rank Totem", 22, "#26221f", { weight: "900" });
+  const sub = text(this, x + 22, y + 56, `${this.progress.xp} XP | ${currentTier.name}`, 12, "#d77458", {
+    weight: "900",
+    wordWrap: { width: width - 92 }
+  });
+  const closeBg = this.add.graphics();
+  closeBg.fillStyle(0x26221f, 0.94);
+  closeBg.fillRoundedRect(x + width - 52, y + 24, 30, 30, 10);
+  const closeText = text(this, x + width - 37, y + 30, "X", 13, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
+  const closeZone = this.add.zone(x + width - 52, y + 24, 30, 30).setOrigin(0, 0).setInteractive({
+    hitArea: new Phaser.Geom.Rectangle(0, 0, 30, 30),
+    hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+    useHandCursor: true
+  });
+  closeZone.on("pointerdown", () => this.hideLadder());
+
+  const poleX = x + 64;
+  const topY = y + 112;
+  const stepGap = Math.min(64, (height - 206) / (tiers.length - 1));
+  const pole = this.add.rectangle(poleX, topY + stepGap * 2.5, 10, stepGap * 5 + 40, 0x6f655c, 0.78);
+  const star = this.add.star(poleX, topY - 35, 5, 11, 23, 0xe5bc58, 0.96).setStrokeStyle(2, 0x26221f, 0.52);
+  const rungItems = [];
+
+  tiers.slice().reverse().forEach((tier, reversedIndex) => {
+    const tierIndex = tiers.length - 1 - reversedIndex;
+    const rowY = topY + reversedIndex * stepGap;
+    const reached = tierIndex <= currentIndex;
+    const active = tierIndex === currentIndex;
+    const block = this.add.graphics();
+    block.fillStyle(reached ? colors[tierIndex] : 0xffffff, reached ? 0.94 : 0.78);
+    block.lineStyle(active ? 3 : 1.5, active ? 0x26221f : 0x6f655c, active ? 0.82 : 0.34);
+    block.fillRoundedRect(poleX - 38, rowY - 18, 76, 36, 11);
+    block.strokeRoundedRect(poleX - 38, rowY - 18, 76, 36, 11);
+    const icon = reached ? "*" : `${tierIndex + 1}`;
+    const badge = text(this, poleX, rowY - 10, icon, 15, reached ? "#ffffff" : "#6f655c", {
+      weight: "900",
+      align: "center"
+    }).setOrigin(0.5, 0);
+    const name = text(this, x + 122, rowY - 16, tier.name, tier.name.length > 20 ? 12 : 13, active ? "#26221f" : "#6f655c", {
+      weight: "900",
+      wordWrap: { width: width - 152 }
+    });
+    const xp = text(this, x + 122, rowY + 8, `${tier.xp} XP`, 10, reached ? "#d77458" : "#9b9288", { weight: "900" });
+    rungItems.push(block, badge, name, xp);
+    if (active) {
+      const glow = this.add.circle(poleX, rowY, 34, 0xe5bc58, 0.15);
+      this.tweens.add({ targets: glow, alpha: 0.34, scale: 1.08, yoyo: true, repeat: -1, duration: 900, ease: "Sine.inOut" });
+      rungItems.push(glow);
+    }
+  });
+
+  const footer = this.add.graphics();
+  footer.fillStyle(0xfff0c7, 0.88);
+  footer.lineStyle(1.4, 0x26221f, 0.28);
+  footer.fillRoundedRect(x + 18, y + height - 66, width - 36, 46, 14);
+  footer.strokeRoundedRect(x + 18, y + height - 66, width - 36, 46, 14);
+  const footerText = nextTier
+    ? `${nextTier.xp - this.progress.xp} XP to reach ${nextTier.name}`
+    : "You are at the top of the Inner Circle.";
+  const footerCopy = text(this, x + 34, y + height - 53, footerText, 12, "#26221f", {
+    weight: "900",
+    wordWrap: { width: width - 68 }
+  });
+
+  this.ladderView.add([shade, bg, headerTone, title, sub, closeBg, closeText, closeZone, pole, star, ...rungItems, footer, footerCopy]);
+};
+
+CampusScene.prototype.openLadder = function openLadder() {
+  this.hidePreview();
+  if (this.ladderView) this.ladderView.setVisible(true);
+  const targetScrollX = Phaser.Math.Clamp(this.worldWidth - this.scale.width, 0, this.worldWidth - this.scale.width);
+  this.tweens.add({ targets: this.cameras.main, scrollX: targetScrollX, duration: 420, ease: "Sine.easeInOut" });
+  this.say("This is your VIP Rank Totem. Complete missions to climb toward Market Oracle.");
+};
+
+CampusScene.prototype.hideLadder = function hideLadder() {
+  if (this.ladderView) this.ladderView.setVisible(false);
 };
 
 CampusScene.prototype.createBottomMenu = function createBottomMenu() {
@@ -1108,10 +1261,13 @@ CampusScene.prototype.createBottomMenu = function createBottomMenu() {
     circle.setInteractive();
     circle.on("pointerdown", () => {
       if (label === "Guide") this.say("Tap a building, wait for Mina to arrive, then press Enter.");
-      if (label === "Ladder") this.say(`Current rank: ${getTier(this.progress.xp).name}. Earn EXP from missions to climb.`);
+      if (label === "Ladder") this.openLadder();
       if (label === "Perks") this.say("Perks unlock through EXP. Founder recaps and early access come later.");
       if (label === "Profile") this.say("Your VIP profile is linked to your mission signals.");
-      if (label === "Missions") this.say("Choose a mission room on the campus map.");
+      if (label === "Missions") {
+        this.hideLadder();
+        this.say("Choose a mission room on the campus map.");
+      }
     });
   });
 };
