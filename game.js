@@ -1061,7 +1061,8 @@ StartScene.prototype.create = function createMangaOpening() {
     }).setDepth(7);
   });
 
-  const startY = height - 82;
+  const visibleHeight = Math.ceil(window.visualViewport?.height || height);
+  const startY = Math.min(height - 82, visibleHeight - 82);
   const start = mangaPanel(this, 40, startY, width - 80, 58, { skew: 8, fill: 0xd77458, alpha: 0.96, strokeWidth: 3 }).setDepth(9);
   screenTone(this, 48, startY + 8, width - 96, 42, 0xffffff, 0.13).setDepth(10);
   text(this, width / 2, startY + 18, "Enter VIP Archive", 18, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(11);
