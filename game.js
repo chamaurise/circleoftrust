@@ -25,11 +25,19 @@ const AMIRA_POSES = [
 ];
 
 function viewportWidth() {
-  return Math.ceil(window.visualViewport?.width || document.documentElement.clientWidth || window.innerWidth || GAME_WIDTH);
+  return Math.max(320, Math.ceil(window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || GAME_WIDTH));
 }
 
 function viewportHeight() {
-  return Math.ceil(window.visualViewport?.height || document.documentElement.clientHeight || window.innerHeight || GAME_HEIGHT);
+  return Math.max(620, Math.ceil(window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || GAME_HEIGHT));
+}
+
+function syncAppViewport() {
+  const width = viewportWidth();
+  const height = viewportHeight();
+  document.documentElement.style.setProperty("--app-height", `${height}px`);
+  document.documentElement.style.setProperty("--app-width", `${width}px`);
+  return { width, height };
 }
 
 const missions = [
@@ -1755,8 +1763,8 @@ const config = {
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.NO_CENTER,
-    width: Math.max(GAME_WIDTH, viewportWidth()),
-    height: Math.max(GAME_HEIGHT, viewportHeight())
+    width: viewportWidth(),
+    height: viewportHeight()
   },
   input: {
     activePointers: 3
@@ -1769,7 +1777,17 @@ function startGame() {
   window.circleOfTrustGameStarted = true;
   try {
     if (!window.Phaser) throw new Error("Phaser runtime was not loaded.");
-    new Phaser.Game(config);
+    syncAppViewport();
+    const game = new Phaser.Game(config);
+    window.circleOfTrustGame = game;
+    const resizeGame = () => {
+      const size = syncAppViewport();
+      game.scale.resize(size.width, size.height);
+    };
+    window.addEventListener("resize", resizeGame, { passive: true });
+    window.visualViewport?.addEventListener("resize", resizeGame, { passive: true });
+    window.visualViewport?.addEventListener("scroll", resizeGame, { passive: true });
+    window.addEventListener("orientationchange", () => setTimeout(resizeGame, 250), { passive: true });
     document.body.classList.add("game-ready");
   } catch (error) {
     const fallback = document.querySelector("#fallback-screen p");
