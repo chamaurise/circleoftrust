@@ -101,6 +101,43 @@ const tiers = [
   { name: "Market Oracle", xp: 500 }
 ];
 
+const RANK_META = [
+  { short: "Signal", perk: "Your first product votes count.", color: 0xd77458, accent: 0xfff0c7 },
+  { short: "Scout", perk: "Spot early design momentum.", color: 0x77a7c7, accent: 0xeaf5fb },
+  { short: "Insider", perk: "Unlock category-level recaps.", color: 0x72927d, accent: 0xeef6ef },
+  { short: "Launch", perk: "Enter launch-circle rewards.", color: 0xe5bc58, accent: 0xfff0c7 },
+  { short: "Council", perk: "Shape founder decisions.", color: 0xb99adf, accent: 0xf4ecff },
+  { short: "Oracle", perk: "Top-tier market signal status.", color: 0x26221f, accent: 0xf1eee8 }
+];
+
+const SHOE_CONCEPTS = Array.from({ length: 8 }, (_, index) => {
+  const number = String(index + 1).padStart(2, "0");
+  const palette = ["Cream", "Black", "Blush", "Nude", "Sage", "Light Blue", "Oat", "Rose"];
+  const silhouettes = ["Mary Jane", "Loafer", "Ballet Flat", "Slingback", "Mule", "Platform Flat", "Penny Loafer", "Soft Pump"];
+  return {
+    id: `concept-${number}`,
+    name: `Factory Concept ${number}`,
+    factoryCode: `SS-FY26-${number}`,
+    category: index % 2 ? "Factory Shortlist" : "Comfort Platform",
+    material: index % 3 === 0 ? "Mesh upper" : "Soft leather blend",
+    colorway: palette[index],
+    silhouette: silhouettes[index],
+    priceBand: "$139-$169",
+    image: `https://raw.githubusercontent.com/chamaurise/sundaystaples-innercircle/main/shoe-concepts/concept-${number}.png`,
+    tags: [palette[index], silhouettes[index], index % 2 ? "Work-to-weekend" : "Comfort-led"]
+  };
+});
+
+const DUEL_PAIRS = [
+  ["concept-01", "concept-02"],
+  ["concept-03", "concept-04"],
+  ["concept-05", "concept-06"],
+  ["concept-07", "concept-08"]
+];
+
+const DUEL_DRIVER_TAGS = ["Comfort", "Polish", "Versatility", "Newness"];
+const DUEL_STORAGE_KEY = "circleOfTrustFootwearDuel";
+
 function loadProgress() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { xp: 0, completed: [] };
@@ -111,6 +148,22 @@ function loadProgress() {
 
 function saveProgress(progress) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+}
+
+function conceptById(id) {
+  return SHOE_CONCEPTS.find((concept) => concept.id === id) || SHOE_CONCEPTS[0];
+}
+
+function loadDuelState() {
+  try {
+    return JSON.parse(localStorage.getItem(DUEL_STORAGE_KEY)) || { round: 0, answers: [] };
+  } catch {
+    return { round: 0, answers: [] };
+  }
+}
+
+function saveDuelState(state) {
+  localStorage.setItem(DUEL_STORAGE_KEY, JSON.stringify(state));
 }
 
 function getTier(xp) {
@@ -261,6 +314,7 @@ class BootScene extends Phaser.Scene {
     this.load.image("minaDialogue", "assets/mina-confident-dialogue.png");
     this.load.image("shoeMaryJane", "assets/shoe-mary-jane.png");
     this.load.image("shoeLoafer", "assets/shoe-loafer.png");
+    SHOE_CONCEPTS.forEach((concept) => this.load.image(concept.id, concept.image));
   }
 
   create() {
@@ -504,6 +558,9 @@ class MissionScene extends Phaser.Scene {
 
   init(data) {
     this.mission = data.mission || missions[0];
+    this.duelState = loadDuelState();
+    this.selectedDuelChoice = null;
+    this.selectedDuelDriver = null;
   }
 
   create() {
@@ -599,6 +656,20 @@ class MissionScene extends Phaser.Scene {
   }
 
   completeMission() {
+    if (this.mission.id === "duel" && this.selectedDuelChoice) {
+      const round = Math.min(this.duelState.round || 0, DUEL_PAIRS.length - 1);
+      const pair = DUEL_PAIRS[round];
+      this.duelState.answers = (this.duelState.answers || []).filter((item) => item.round !== round);
+      this.duelState.answers.push({
+        round,
+        pair,
+        winner: this.selectedDuelChoice,
+        loser: pair.find((id) => id !== this.selectedDuelChoice),
+        driver: this.selectedDuelDriver || "No driver selected",
+        submittedAt: new Date().toISOString()
+      });
+      saveDuelState(this.duelState);
+    }
     const progress = loadProgress();
     if (!progress.completed.includes(this.mission.id)) {
       progress.completed.push(this.mission.id);
@@ -639,7 +710,13 @@ MissionScene.prototype.drawMiniGame = function drawMiniGameResponsive() {
   const center = this.safeCenter || 195;
 
   if (this.mission.id === "duel") {
-    text(this, left + 34, y - 8, "Tap the shoe with stronger purchase pull.", 13, "#26221f", { weight: "900" });
+    const round = Math.min(this.duelState.round || 0, DUEL_PAIRS.length - 1);
+    const pair = DUEL_PAIRS[round];
+    const contenders = pair.map(conceptById);
+    text(this, left + 34, y - 10, `Bout ${round + 1} of ${DUEL_PAIRS.length}: tap the design with stronger purchase pull.`, 12, "#26221f", {
+      weight: "900",
+      wordWrap: { width: width - 92 }
+    });
 
     const ringX = left + 18;
     const ringW = width - 72;
@@ -660,41 +737,70 @@ MissionScene.prototype.drawMiniGame = function drawMiniGameResponsive() {
     text(this, center, y + 50, "FOOTWEAR DUEL", 12, "#d77458", { weight: "900" }).setOrigin(0.5, 0);
     text(this, center, y + 154, "VS", 34, "#26221f", { weight: "900" }).setOrigin(0.5);
 
-    const contenders = [
-      { name: "Cloudstep\nMary Jane", x: center - 85, color: 0xd77458, texture: "shoeMaryJane" },
-      { name: "Founder\nLoafer", x: center + 85, color: 0x77a7c7, texture: "shoeLoafer" }
-    ];
     const outlines = [];
+    const cardColors = [0xd77458, 0x77a7c7];
     contenders.forEach((item, index) => {
-      const card = this.add.container(item.x, y + 162);
+      const card = this.add.container(center + (index === 0 ? -86 : 86), y + 162);
+      const itemColor = cardColors[index];
       const bg = this.add.graphics();
       bg.fillStyle(0xffffff, 0.92);
-      bg.lineStyle(2.2, item.color, 0.95);
+      bg.lineStyle(2.2, itemColor, 0.95);
       bg.fillRoundedRect(-58, -68, 116, 148, 18);
       bg.strokeRoundedRect(-58, -68, 116, 148, 18);
-      const stripe = this.add.rectangle(0, -56, 92, 8, item.color, 0.86).setOrigin(0.5);
+      const stripe = this.add.rectangle(0, -56, 92, 8, itemColor, 0.86).setOrigin(0.5);
       const mat = this.add.ellipse(0, 2, 88, 44, 0xfff8eb, 1).setStrokeStyle(2, 0x26221f, 0.32);
-      const shoe = this.add.image(0, -4, item.texture).setDisplaySize(94, 58);
-      const name = text(this, 0, 38, item.name, 12, "#26221f", {
+      const shoe = this.add.image(0, -6, item.id).setDisplaySize(92, 62);
+      const name = text(this, 0, 35, item.name.replace("Factory ", "F."), 10, "#26221f", {
         weight: "900",
         align: "center",
         wordWrap: { width: 96 }
       }).setOrigin(0.5, 0);
-      const vote = text(this, 0, 92, "Tap to vote", 9, "#d77458", { weight: "900", align: "center" }).setOrigin(0.5, 0);
+      const tags = text(this, 0, 68, `${item.colorway} | ${item.silhouette}`, 7.4, "#6f655c", {
+        weight: "900",
+        align: "center",
+        wordWrap: { width: 96 }
+      }).setOrigin(0.5, 0);
+      const vote = text(this, 0, 96, "Choose", 9, "#d77458", { weight: "900", align: "center" }).setOrigin(0.5, 0);
       const outline = this.add.graphics();
       outline.strokeRoundedRect(-63, -73, 126, 158, 22);
       outlines.push(outline);
-      card.add([bg, stripe, mat, shoe, name, vote, outline]);
+      card.add([bg, stripe, mat, shoe, name, tags, vote, outline]);
       card.setSize(126, 158).setInteractive(new Phaser.Geom.Rectangle(-63, -73, 126, 158), Phaser.Geom.Rectangle.Contains);
       card.on("pointerdown", () => {
-        this.selectedDuelChoice = index;
+        this.selectedDuelChoice = item.id;
         outlines.forEach((entry, outlineIndex) => {
           entry.clear();
-          entry.lineStyle(outlineIndex === index ? 4 : 0, contenders[outlineIndex].color, outlineIndex === index ? 1 : 0);
+          entry.lineStyle(outlineIndex === index ? 4 : 0, cardColors[outlineIndex], outlineIndex === index ? 1 : 0);
           entry.strokeRoundedRect(-63, -73, 126, 158, 22);
         });
       });
     });
+    text(this, left + 34, y + 306, "Why did it win?", 12, "#26221f", { weight: "900" });
+    DUEL_DRIVER_TAGS.forEach((driver, index) => {
+      const tagX = left + 34 + (index % 2) * 142;
+      const tagY = y + 330 + Math.floor(index / 2) * 34;
+      const tag = pill(this, tagX, tagY, 124, 25, 0xffffff);
+      const tagText = text(this, tagX + 62, tagY + 6, driver, 9, "#26221f", { weight: "900", align: "center" }).setOrigin(0.5, 0);
+      const zone = this.add.zone(tagX, tagY, 124, 25).setOrigin(0, 0).setInteractive({
+        hitArea: new Phaser.Geom.Rectangle(0, 0, 124, 25),
+        hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+        useHandCursor: true
+      });
+      zone.on("pointerdown", () => {
+        this.selectedDuelDriver = driver;
+        tag.clear();
+        tag.fillStyle(0xfff0c7, 0.96);
+        tag.lineStyle(1.6, 0xd77458, 0.9);
+        tag.fillRoundedRect(tagX, tagY, 124, 25, 13);
+        tag.strokeRoundedRect(tagX, tagY, 124, 25, 13);
+        tagText.setColor("#d77458");
+      });
+    });
+    const nextLabel = round < DUEL_PAIRS.length - 1 ? "Lock Bout + Next" : "Lock Final Bout";
+    const next = panel(this, left + 34, y + 404, width - 104, 38, 14, 0xd77458);
+    text(this, center, y + 414, nextLabel, 13, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0);
+    next.setInteractive(new Phaser.Geom.Rectangle(left + 34, y + 404, width - 104, 38), Phaser.Geom.Rectangle.Contains);
+    next.on("pointerdown", () => this.lockDuelBout());
     return;
   }
 
@@ -711,6 +817,31 @@ MissionScene.prototype.drawMiniGame = function drawMiniGameResponsive() {
     panel(this, left + 36, y + 34 + index * 76, width - 108, 54, 16, 0xffffff);
     text(this, left + 60, y + 48 + index * 76, `${label}. ${["Strongest", "Needs proof", "Founder action"][index]}`, 16, "#26221f", { weight: "900" });
   });
+};
+
+MissionScene.prototype.lockDuelBout = function lockDuelBout() {
+  if (this.mission.id !== "duel" || !this.selectedDuelChoice) return;
+  const round = Math.min(this.duelState.round || 0, DUEL_PAIRS.length - 1);
+  const pair = DUEL_PAIRS[round];
+  const answer = {
+    round,
+    pair,
+    winner: this.selectedDuelChoice,
+    loser: pair.find((id) => id !== this.selectedDuelChoice),
+    driver: this.selectedDuelDriver || "No driver selected",
+    submittedAt: new Date().toISOString()
+  };
+  this.duelState.answers = (this.duelState.answers || []).filter((item) => item.round !== round);
+  this.duelState.answers.push(answer);
+  this.duelState.round = Math.min(round + 1, DUEL_PAIRS.length - 1);
+  saveDuelState(this.duelState);
+
+  if (round >= DUEL_PAIRS.length - 1) {
+    this.completeMission();
+    return;
+  }
+
+  this.scene.restart({ mission: this.mission });
 };
 
 class ResultScene extends Phaser.Scene {
@@ -1023,41 +1154,69 @@ CampusScene.prototype.createMissionPins = function createMissionPins() {
 };
 
 CampusScene.prototype.createRankTotem = function createRankTotem() {
-  const x = this.worldWidth - 70;
-  const baseY = this.scale.height - 236;
+  const x = this.worldWidth - 76;
+  const baseY = this.scale.height - 214;
   const currentIndex = getTierIndex(this.progress.xp);
-  const colors = [0xd77458, 0x77a7c7, 0x72927d, 0xe5bc58, 0xb99adf, 0x26221f];
+  const monument = this.add.container(0, 0).setDepth(8);
+  const backGlow = this.add.ellipse(x, baseY - 116, 150, 300, 0xfff0c7, 0.17);
+  const ground = this.add.ellipse(x, baseY + 46, 154, 26, 0x26221f, 0.13);
+  const pedestal = this.add.graphics();
+  pedestal.fillStyle(0xfffbf2, 0.92);
+  pedestal.lineStyle(2.2, 0x26221f, 0.55);
+  pedestal.fillRoundedRect(x - 58, baseY + 18, 116, 38, 12);
+  pedestal.strokeRoundedRect(x - 58, baseY + 18, 116, 38, 12);
+  pedestal.fillStyle(0xd77458, 0.88);
+  pedestal.fillRoundedRect(x - 42, baseY + 27, 84, 8, 4);
 
-  const ground = this.add.ellipse(x, baseY + 42, 110, 22, 0x26221f, 0.14).setDepth(8);
-  const mast = this.add.rectangle(x, baseY - 96, 12, 244, 0x6f655c, 0.82).setDepth(8.2);
-  const cap = this.add.star(x, baseY - 232, 5, 10, 21, 0xe5bc58, 0.96).setStrokeStyle(2, 0xfffbf2).setDepth(10);
-  this.rankTotem = this.add.container(0, 0, [ground, mast, cap]).setDepth(8);
+  const mast = this.add.graphics();
+  mast.fillStyle(0x6f655c, 0.84);
+  mast.fillRoundedRect(x - 8, baseY - 236, 16, 264, 8);
+  mast.fillStyle(0xffffff, 0.28);
+  mast.fillRoundedRect(x - 3, baseY - 226, 3, 236, 2);
+  const crown = this.add.star(x, baseY - 256, 7, 13, 30, 0xe5bc58, 0.96).setStrokeStyle(2.6, 0xfffbf2, 0.95);
+  const crownHalo = this.add.circle(x, baseY - 256, 42, 0xe5bc58, 0.12);
+  monument.add([backGlow, ground, pedestal, mast, crownHalo, crown]);
 
   tiers.forEach((tier, index) => {
-    const y = baseY - index * 39;
+    const y = baseY - index * 42;
     const reached = index <= currentIndex;
-    const block = this.add.graphics().setDepth(9 + index / 10);
-    block.fillStyle(reached ? colors[index] : 0xfffbf2, reached ? 0.94 : 0.74);
-    block.lineStyle(reached ? 2.4 : 1.4, reached ? 0xfffbf2 : 0x26221f, reached ? 0.92 : 0.42);
-    block.fillRoundedRect(x - 54, y - 20, 108, 30, 9);
-    block.strokeRoundedRect(x - 54, y - 20, 108, 30, 9);
-    block.lineStyle(1, 0xffffff, reached ? 0.74 : 0.42);
-    block.lineBetween(x - 42, y - 14, x + 42, y - 14);
-    text(this, x, y - 13, tier.name.replace(" ", "\n"), index >= 4 ? 6.2 : 7, reached ? "#ffffff" : "#26221f", {
+    const active = index === currentIndex;
+    const meta = RANK_META[index];
+    const side = index % 2 === 0 ? -1 : 1;
+    const badgeX = x + side * 24;
+    const badge = this.add.graphics().setDepth(9 + index / 10);
+    if (active) {
+      badge.fillStyle(0xe5bc58, 0.18);
+      badge.fillCircle(badgeX, y, 28);
+    }
+    badge.fillStyle(reached ? meta.color : 0xfffbf2, reached ? 0.95 : 0.82);
+    badge.lineStyle(active ? 3 : 1.6, active ? 0xfffbf2 : 0x26221f, active ? 0.95 : 0.45);
+    badge.fillCircle(badgeX, y, active ? 21 : 17);
+    badge.strokeCircle(badgeX, y, active ? 21 : 17);
+    badge.fillStyle(0xffffff, reached ? 0.22 : 0.48);
+    badge.fillCircle(badgeX - 5, y - 6, active ? 7 : 5);
+    badge.lineStyle(2, reached ? 0xfffbf2 : 0x6f655c, reached ? 0.72 : 0.32);
+    badge.lineBetween(x, y, badgeX - side * 16, y);
+    const number = text(this, badgeX, y - 8, `${index + 1}`, 13, reached ? "#ffffff" : "#6f655c", {
       weight: "900",
-      align: "center",
-      wordWrap: { width: 86 }
+      align: "center"
     }).setOrigin(0.5, 0).setDepth(10 + index / 10);
+    if (active) {
+      this.tweens.add({ targets: badge, alpha: 0.72, yoyo: true, repeat: -1, duration: 900, ease: "Sine.inOut" });
+    }
+    monument.add([badge, number]);
   });
 
   const sign = this.add.graphics().setDepth(12);
-  sign.fillStyle(0xfffbf2, 0.92);
-  sign.lineStyle(2, 0x26221f, 0.7);
-  sign.fillRoundedRect(x - 58, baseY + 52, 116, 34, 9);
-  sign.strokeRoundedRect(x - 58, baseY + 52, 116, 34, 9);
-  text(this, x, baseY + 61, "Rank Ladder", 11, "#26221f", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(13);
+  sign.fillStyle(0x26221f, 0.92);
+  sign.lineStyle(2, 0xfffbf2, 0.84);
+  sign.fillRoundedRect(x - 62, baseY + 62, 124, 40, 13);
+  sign.strokeRoundedRect(x - 62, baseY + 62, 124, 40, 13);
+  text(this, x, baseY + 70, "Ascension Tower", 10, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(13);
+  text(this, x, baseY + 86, `${this.progress.xp} XP`, 9, "#fff0c7", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(13);
   const zone = this.add.zone(x, baseY - 80, 128, 330).setInteractive({ useHandCursor: true }).setDepth(14);
   zone.on("pointerdown", () => this.openLadder());
+  this.rankTotem = monument;
 };
 
 CampusScene.prototype.createQuest = function createQuest() {
@@ -1144,30 +1303,40 @@ CampusScene.prototype.createLadderView = function createLadderView() {
   const currentIndex = getTierIndex(this.progress.xp);
   const currentTier = tiers[currentIndex];
   const nextTier = tiers[currentIndex + 1];
-  const colors = [0xd77458, 0x77a7c7, 0x72927d, 0xe5bc58, 0xb99adf, 0x26221f];
+  const maxXp = tiers[tiers.length - 1].xp;
+  const progressRatio = Phaser.Math.Clamp(this.progress.xp / maxXp, 0, 1);
 
   this.ladderView = this.add.container(0, 0).setDepth(60).setScrollFactor(0).setVisible(false);
 
-  const shade = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x26221f, 0.28).setOrigin(0, 0);
+  const shade = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x171412, 0.42).setOrigin(0, 0);
   shade.setInteractive(new Phaser.Geom.Rectangle(0, 0, this.scale.width, this.scale.height), Phaser.Geom.Rectangle.Contains);
   const bg = this.add.graphics();
-  bg.fillStyle(0xfffbf2, 0.97);
-  bg.lineStyle(2.4, 0x26221f, 0.72);
-  bg.fillRoundedRect(x, y, width, height, 20);
-  bg.strokeRoundedRect(x, y, width, height, 20);
-  bg.lineStyle(1, 0xffffff, 0.82);
-  bg.lineBetween(x + 20, y + 16, x + width - 20, y + 16);
-  const headerTone = screenTone(this, x + 14, y + 14, width - 28, 58, 0xd77458, 0.08);
+  bg.fillStyle(0xfffbf2, 0.98);
+  bg.lineStyle(3, 0x26221f, 0.76);
+  bg.fillRoundedRect(x, y, width, height, 24);
+  bg.strokeRoundedRect(x, y, width, height, 24);
+  bg.fillStyle(0x26221f, 0.92);
+  bg.fillRoundedRect(x + 10, y + 10, width - 20, 84, 20);
+  bg.fillStyle(0xd77458, 0.9);
+  bg.fillRoundedRect(x + 24, y + 80, width - 48, 5, 3);
+  bg.fillStyle(0xe5bc58, 0.18);
+  bg.fillCircle(x + width - 76, y + 52, 48);
+  bg.fillStyle(0xffffff, 0.12);
+  bg.fillCircle(x + width - 58, y + 40, 28);
+  const headerTone = screenTone(this, x + 18, y + 18, width - 36, 66, 0xffffff, 0.06);
 
-  const title = text(this, x + 22, y + 24, "VIP Rank Totem", 22, "#26221f", { weight: "900" });
-  const sub = text(this, x + 22, y + 56, `${this.progress.xp} XP | ${currentTier.name}`, 12, "#d77458", {
+  const title = text(this, x + 26, y + 24, "Inner Circle", 24, "#ffffff", { weight: "900" });
+  const sub = text(this, x + 26, y + 56, `${currentTier.name} | ${this.progress.xp} XP`, 11, "#fff0c7", {
     weight: "900",
-    wordWrap: { width: width - 92 }
+    wordWrap: { width: width - 112 }
   });
+  const crown = this.add.star(x + width - 63, y + 50, 7, 10, 22, 0xe5bc58, 0.96).setStrokeStyle(2, 0xfffbf2, 0.78);
   const closeBg = this.add.graphics();
-  closeBg.fillStyle(0x26221f, 0.94);
-  closeBg.fillRoundedRect(x + width - 52, y + 24, 30, 30, 10);
-  const closeText = text(this, x + width - 37, y + 30, "X", 13, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
+  closeBg.fillStyle(0xfffbf2, 0.18);
+  closeBg.lineStyle(1.4, 0xfffbf2, 0.45);
+  closeBg.fillRoundedRect(x + width - 42, y + 20, 26, 26, 9);
+  closeBg.strokeRoundedRect(x + width - 42, y + 20, 26, 26, 9);
+  const closeText = text(this, x + width - 29, y + 25, "X", 11, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
   const closeZone = this.add.zone(x + width - 52, y + 24, 30, 30).setOrigin(0, 0).setInteractive({
     hitArea: new Phaser.Geom.Rectangle(0, 0, 30, 30),
     hitAreaCallback: Phaser.Geom.Rectangle.Contains,
@@ -1175,11 +1344,18 @@ CampusScene.prototype.createLadderView = function createLadderView() {
   });
   closeZone.on("pointerdown", () => this.hideLadder());
 
-  const poleX = x + 64;
-  const topY = y + 112;
-  const stepGap = Math.min(64, (height - 206) / (tiers.length - 1));
-  const pole = this.add.rectangle(poleX, topY + stepGap * 2.5, 10, stepGap * 5 + 40, 0x6f655c, 0.78);
-  const star = this.add.star(poleX, topY - 35, 5, 11, 23, 0xe5bc58, 0.96).setStrokeStyle(2, 0x26221f, 0.52);
+  const pathX = x + 60;
+  const topY = y + 134;
+  const bottomY = y + height - 118;
+  const pathH = bottomY - topY;
+  const stepGap = pathH / (tiers.length - 1);
+  const track = this.add.graphics();
+  track.lineStyle(10, 0xeadfce, 0.96);
+  track.lineBetween(pathX, topY, pathX, bottomY);
+  track.lineStyle(10, 0xd77458, 0.88);
+  track.lineBetween(pathX, bottomY, pathX, bottomY - pathH * progressRatio);
+  track.lineStyle(2, 0xffffff, 0.62);
+  track.lineBetween(pathX - 2, bottomY, pathX - 2, bottomY - pathH * progressRatio);
   const rungItems = [];
 
   tiers.slice().reverse().forEach((tier, reversedIndex) => {
@@ -1187,43 +1363,61 @@ CampusScene.prototype.createLadderView = function createLadderView() {
     const rowY = topY + reversedIndex * stepGap;
     const reached = tierIndex <= currentIndex;
     const active = tierIndex === currentIndex;
+    const meta = RANK_META[tierIndex];
     const block = this.add.graphics();
-    block.fillStyle(reached ? colors[tierIndex] : 0xffffff, reached ? 0.94 : 0.78);
-    block.lineStyle(active ? 3 : 1.5, active ? 0x26221f : 0x6f655c, active ? 0.82 : 0.34);
-    block.fillRoundedRect(poleX - 38, rowY - 18, 76, 36, 11);
-    block.strokeRoundedRect(poleX - 38, rowY - 18, 76, 36, 11);
-    const icon = reached ? "*" : `${tierIndex + 1}`;
-    const badge = text(this, poleX, rowY - 10, icon, 15, reached ? "#ffffff" : "#6f655c", {
+    if (active) {
+      block.fillStyle(0xe5bc58, 0.18);
+      block.fillRoundedRect(x + 32, rowY - 25, width - 64, 52, 18);
+    }
+    block.fillStyle(reached ? meta.color : 0xffffff, reached ? 0.96 : 0.78);
+    block.lineStyle(active ? 3 : 1.4, active ? 0xe5bc58 : 0x26221f, active ? 0.95 : 0.18);
+    block.fillCircle(pathX, rowY, active ? 24 : 19);
+    block.strokeCircle(pathX, rowY, active ? 24 : 19);
+    block.fillStyle(0xffffff, reached ? 0.22 : 0.5);
+    block.fillCircle(pathX - 6, rowY - 7, active ? 8 : 6);
+    block.fillStyle(active ? 0xfff0c7 : meta.accent, active ? 0.92 : 0.74);
+    block.lineStyle(active ? 2 : 1, active ? 0xe5bc58 : 0x26221f, active ? 0.8 : 0.14);
+    block.fillRoundedRect(x + 94, rowY - 23, width - 128, 46, 14);
+    block.strokeRoundedRect(x + 94, rowY - 23, width - 128, 46, 14);
+    const icon = reached ? "OK" : `${tierIndex + 1}`;
+    const badge = text(this, pathX, rowY - 7, icon, reached ? 8 : 12, reached ? "#ffffff" : "#6f655c", {
       weight: "900",
       align: "center"
     }).setOrigin(0.5, 0);
-    const name = text(this, x + 122, rowY - 16, tier.name, tier.name.length > 20 ? 12 : 13, active ? "#26221f" : "#6f655c", {
+    const name = text(this, x + 110, rowY - 17, tier.name, tier.name.length > 22 ? 11 : 12, active ? "#26221f" : "#453f39", {
       weight: "900",
-      wordWrap: { width: width - 152 }
+      wordWrap: { width: width - 146 }
     });
-    const xp = text(this, x + 122, rowY + 8, `${tier.xp} XP`, 10, reached ? "#d77458" : "#9b9288", { weight: "900" });
+    const xp = text(this, x + 110, rowY + 4, `${tier.xp} XP - ${meta.perk}`, 8.2, reached ? "#d77458" : "#756b62", {
+      weight: "900",
+      wordWrap: { width: width - 146 }
+    });
     rungItems.push(block, badge, name, xp);
     if (active) {
-      const glow = this.add.circle(poleX, rowY, 34, 0xe5bc58, 0.15);
+      const glow = this.add.circle(pathX, rowY, 34, 0xe5bc58, 0.16);
       this.tweens.add({ targets: glow, alpha: 0.34, scale: 1.08, yoyo: true, repeat: -1, duration: 900, ease: "Sine.inOut" });
       rungItems.push(glow);
     }
   });
 
   const footer = this.add.graphics();
-  footer.fillStyle(0xfff0c7, 0.88);
-  footer.lineStyle(1.4, 0x26221f, 0.28);
-  footer.fillRoundedRect(x + 18, y + height - 66, width - 36, 46, 14);
-  footer.strokeRoundedRect(x + 18, y + height - 66, width - 36, 46, 14);
+  footer.fillStyle(0x26221f, 0.92);
+  footer.lineStyle(1.4, 0xe5bc58, 0.66);
+  footer.fillRoundedRect(x + 18, y + height - 72, width - 36, 52, 17);
+  footer.strokeRoundedRect(x + 18, y + height - 72, width - 36, 52, 17);
   const footerText = nextTier
     ? `${nextTier.xp - this.progress.xp} XP to reach ${nextTier.name}`
     : "You are at the top of the Inner Circle.";
-  const footerCopy = text(this, x + 34, y + height - 53, footerText, 12, "#26221f", {
+  const footerCopy = text(this, x + 34, y + height - 58, footerText, 12, "#ffffff", {
+    weight: "900",
+    wordWrap: { width: width - 68 }
+  });
+  const footerSmall = text(this, x + 34, y + height - 37, "Complete campus missions to climb the tower.", 8.5, "#fff0c7", {
     weight: "900",
     wordWrap: { width: width - 68 }
   });
 
-  this.ladderView.add([shade, bg, headerTone, title, sub, closeBg, closeText, closeZone, pole, star, ...rungItems, footer, footerCopy]);
+  this.ladderView.add([shade, bg, headerTone, title, sub, crown, closeBg, closeText, closeZone, track, ...rungItems, footer, footerCopy, footerSmall]);
 };
 
 CampusScene.prototype.openLadder = function openLadder() {
