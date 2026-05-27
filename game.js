@@ -1015,37 +1015,40 @@ StartScene.prototype.create = function createMangaOpening() {
   shade.fillRect(0, 0, width, height);
   screenTone(this, 0, 0, width, height, 0x26221f, 0.07);
 
-  mangaPanel(this, 24, 52, width - 48, 238, { skew: -10, fill: 0xfffbf2, alpha: 0.88, strokeWidth: 3.2 }).setDepth(2);
+  mangaPanel(this, 24, 44, width - 48, 216, { skew: -10, fill: 0xfffbf2, alpha: 0.88, strokeWidth: 3.2 }).setDepth(2);
   screenTone(this, width - 126, 72, 82, 82, 0xd77458, 0.16).setDepth(3);
-  text(this, 44, 88, "SUNDAY STAPLES VIP ARCHIVES", 10, "#d77458", { weight: "900" }).setDepth(4);
-  text(this, 42, 124, "Inner\nCircle", 46, "#26221f", { weight: "900" }).setDepth(4);
-  text(this, 44, 236, "Enter the archive with Mina. Your taste shapes what Sunday Staples designs next.", 12, "#6f655c", {
+  text(this, 44, 76, "SUNDAY STAPLES VIP ARCHIVES", 10, "#d77458", { weight: "900" }).setDepth(4);
+  text(this, 42, 111, "Circle of Trust", 34, "#26221f", { weight: "900", wordWrap: { width: width - 84 } }).setDepth(4);
+  text(this, 44, 194, "Enter the archive with Mina. Your taste shapes what Sunday Staples designs next.", 12, "#6f655c", {
     weight: "900",
     wordWrap: { width: width - 96 }
   }).setDepth(4);
 
-  mangaPanel(this, 38, 324, width - 76, 116, { skew: 8, fill: 0xfff0c7, alpha: 0.92, strokeWidth: 2.8 }).setDepth(5);
-  this.add.circle(92, 386, 40, 0xffffff, 0.72).setDepth(6);
-  this.add.image(92, 390, "avatar").setDisplaySize(62, 100).setOrigin(0.5, 0.66).setDepth(7);
-  text(this, 146, 354, "Circle Pass", 22, "#26221f", { weight: "900" }).setDepth(7);
-  text(this, 146, 385, "VIP access ready. Mina opens the archive.", 10, "#6f655c", {
+  mangaPanel(this, 38, 276, width - 76, 106, { skew: 8, fill: 0xfff0c7, alpha: 0.92, strokeWidth: 2.8 }).setDepth(5);
+  this.add.circle(88, 332, 36, 0xffffff, 0.72).setDepth(6);
+  this.add.image(88, 336, "avatar").setDisplaySize(56, 90).setOrigin(0.5, 0.66).setDepth(7);
+  text(this, 136, 304, "Circle Pass", 21, "#26221f", { weight: "900" }).setDepth(7);
+  text(this, 136, 334, "VIP access ready. Mina opens the archive.", 10, "#6f655c", {
     weight: "900",
-    wordWrap: { width: width - 226 }
+    wordWrap: { width: width - 210 }
   }).setDepth(7);
 
   const flow = this.add.graphics().setDepth(5);
   flow.lineStyle(3, 0x26221f, 0.72);
-  flow.lineBetween(94, 440, 94, 466);
+  flow.lineBetween(94, 386, 94, 410);
   flow.fillStyle(0xfffbf2, 0.96);
-  flow.fillCircle(94, 454, 5);
+  flow.fillCircle(94, 398, 5);
   flow.lineStyle(1.2, 0xd77458, 0.8);
-  flow.strokeCircle(94, 454, 5);
+  flow.strokeCircle(94, 398, 5);
 
-  mangaPanel(this, 42, 474, width - 82, 128, { skew: -7, fill: 0xfffbf2, alpha: 0.92, strokeWidth: 2.8, tail: "left" }).setDepth(5);
-  this.add.circle(86, 538, 44, 0xfff0c7, 0.82).setDepth(6);
-  const minaDialogue = this.add.image(82, 540, "minaDialogue").setOrigin(0.5, 0.58).setDepth(7);
-  minaDialogue.setScale(86 / minaDialogue.width);
-  screenTone(this, 106, 492, 220, 82, 0xd77458, 0.09).setDepth(6);
+  const visibleHeight = Math.ceil(window.visualViewport?.height || height);
+  const startY = Math.min(height - 82, visibleHeight - 82);
+  const introY = Math.min(420, startY - 150);
+  mangaPanel(this, 42, introY, width - 82, 122, { skew: -7, fill: 0xfffbf2, alpha: 0.92, strokeWidth: 2.8, tail: "left" }).setDepth(5);
+  this.add.circle(84, introY + 62, 40, 0xfff0c7, 0.82).setDepth(6);
+  const minaDialogue = this.add.image(80, introY + 64, "minaDialogue").setOrigin(0.5, 0.58).setDepth(7);
+  minaDialogue.setScale(78 / minaDialogue.width);
+  screenTone(this, 104, introY + 18, 220, 76, 0xd77458, 0.09).setDepth(6);
 
   [
     "Walk the campus",
@@ -1054,15 +1057,13 @@ StartScene.prototype.create = function createMangaOpening() {
     "Win gift cards, vouchers & more",
     "Unlock bonus founder content"
   ].forEach((item, index) => {
-    this.add.circle(128, 494 + index * 19, 2.7, 0xd77458, 0.95).setDepth(7);
-    text(this, 138, 488 + index * 19, item, 8, "#26221f", {
+    this.add.circle(126, introY + 20 + index * 18, 2.7, 0xd77458, 0.95).setDepth(7);
+    text(this, 136, introY + 14 + index * 18, item, 7.7, "#26221f", {
       weight: "900",
       wordWrap: { width: width - 196 }
     }).setDepth(7);
   });
 
-  const visibleHeight = Math.ceil(window.visualViewport?.height || height);
-  const startY = Math.min(height - 82, visibleHeight - 82);
   const start = mangaPanel(this, 40, startY, width - 80, 58, { skew: 8, fill: 0xd77458, alpha: 0.96, strokeWidth: 3 }).setDepth(9);
   screenTone(this, 48, startY + 8, width - 96, 42, 0xffffff, 0.13).setDepth(10);
   text(this, width / 2, startY + 18, "Enter VIP Archive", 18, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(11);
