@@ -261,8 +261,9 @@ class BootScene extends Phaser.Scene {
 
   create() {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("scene") === "duel") {
-      this.scene.start("MissionScene", { mission: missions.find((mission) => mission.id === "duel") });
+    const requestedMission = missions.find((mission) => mission.id === params.get("scene"));
+    if (requestedMission) {
+      this.scene.start("MissionScene", { mission: requestedMission });
       return;
     }
     this.scene.start(params.get("scene") === "campus" ? "CampusScene" : "StartScene");
@@ -1159,6 +1160,31 @@ CampusScene.prototype.moveTo = function moveTo(x, y, onComplete) {
     duration: safeDuration,
     ease: "Sine.easeInOut"
   });
+};
+
+CampusScene.prototype.enterMission = function enterMission(mission = this.selectedMission) {
+  if (!mission) return;
+  this.scene.start("MissionScene", { mission });
+};
+
+CampusScene.prototype.goToMission = function goToMission(mission) {
+  if (this.selectedMission?.id === mission.id && this.preview?.visible) {
+    this.enterMission(mission);
+    return;
+  }
+  this.selectedMission = mission;
+  this.hidePreview();
+  this.say(`Walking to ${mission.title}. Tap Enter, or tap ${mission.title} again when we arrive.`);
+  this.moveTo(mission.x, mission.y + 58, () => this.showPreview(mission));
+};
+
+CampusScene.prototype.showPreview = function showPreview(mission) {
+  this.selectedMission = mission;
+  this.preview.setVisible(true);
+  this.previewTitle.setText(mission.title);
+  this.previewMeta.setText(`${mission.room} | ${mission.time} | +${mission.xp} XP`);
+  this.previewBody.setText(mission.prompt);
+  this.say(`This is ${mission.room}. Tap Enter, or tap ${mission.title} again to begin.`);
 };
 
 const config = {
