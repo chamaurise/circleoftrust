@@ -1684,6 +1684,7 @@ CampusScene.prototype.createPreview = function createPreview() {
 
 CampusScene.prototype.hidePreview = function hidePreview() {
   if (this.preview) this.preview.setVisible(false);
+  if (this.safeEnterHit) this.safeEnterHit.setVisible(false);
   if (this.arrivalPulse) {
     this.tweens.killTweensOf(this.arrivalPulse);
     this.arrivalPulse.destroy();
@@ -1724,6 +1725,17 @@ CampusScene.prototype.createSelectedMissionDock = function createSelectedMission
   });
   makeTactile(this, hit, [cta, ctaText], { scale: false, hoverAlpha: 1, pressAlpha: 0.76, pressY: 0 });
   this.entryDock.add([bg, this.entryDockTitle, cta, ctaText, hit]);
+
+  this.safeEnterHit = this.add.zone(12 + width - 142, y + 2, 138, 54).setOrigin(0, 0).setScrollFactor(0).setDepth(88).setVisible(false).setInteractive({
+    hitArea: new Phaser.Geom.Rectangle(0, 0, 138, 54),
+    hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+    useHandCursor: true
+  });
+  this.safeEnterHit.on("pointerdown", (pointer, localX, localY, event) => {
+    event?.stopPropagation();
+    this.enterMission(this.selectedMission);
+  });
+  makeTactile(this, this.safeEnterHit, [cta, ctaText], { scale: false, hoverAlpha: 1, pressAlpha: 0.76, pressY: 0 });
 };
 
 CampusScene.prototype.createLadderView = function createLadderView() {
@@ -2036,6 +2048,7 @@ CampusScene.prototype.moveTo = function moveTo(x, y, onComplete) {
 
 CampusScene.prototype.enterMission = function enterMission(mission = this.selectedMission) {
   if (!mission) return;
+  this.selectedMission = mission;
   this.scene.start("MissionScene", { mission });
 };
 
@@ -2043,6 +2056,7 @@ CampusScene.prototype.goToMission = function goToMission(mission) {
   this.selectedMission = mission;
   this.hidePreview();
   if (this.entryDock) this.entryDock.setVisible(false);
+  if (this.safeEnterHit) this.safeEnterHit.setVisible(false);
   this.hideLadder();
   this.closeMissionChecklist();
   const hitRect = this.missionHitRect(mission);
@@ -2074,6 +2088,7 @@ CampusScene.prototype.showPreview = function showPreview(mission) {
     this.entryDockTitle.setText(`${mission.title} selected`);
     this.entryDock.setVisible(true);
   }
+  if (this.safeEnterHit) this.safeEnterHit.setVisible(true);
   this.previewTitle.setText(mission.title);
   this.previewMeta.setText(`${mission.room} | ${mission.time} | +${mission.xp} XP`);
   this.previewBody.setText(mission.prompt);
