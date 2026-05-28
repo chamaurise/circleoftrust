@@ -305,6 +305,51 @@ function navIcon(scene, kind, x, y, color = 0x26221f, depth = 1) {
   return g;
 }
 
+function makeTactile(scene, hit, targets = [], options = {}) {
+  const list = (Array.isArray(targets) ? targets : [targets]).filter(Boolean);
+  const state = list.map((target) => ({
+    target,
+    x: target.x || 0,
+    y: target.y || 0,
+    scaleX: target.scaleX || 1,
+    scaleY: target.scaleY || 1,
+    alpha: target.alpha ?? 1
+  }));
+  const hoverScale = options.hoverScale ?? 1.035;
+  const pressScale = options.pressScale ?? 0.965;
+  const scaleTargets = options.scale !== false;
+  const hoverAlpha = options.hoverAlpha ?? 1;
+  const pressAlpha = options.pressAlpha ?? 0.84;
+  const pressY = options.pressY ?? 1.5;
+  const duration = options.duration ?? 95;
+
+  const tweenTo = (mode) => {
+    state.forEach((entry) => {
+      const isPress = mode === "press";
+      const isHover = mode === "hover";
+      const scale = isPress ? pressScale : isHover ? hoverScale : 1;
+      scene.tweens.killTweensOf(entry.target);
+      scene.tweens.add({
+        targets: entry.target,
+        x: entry.x,
+        y: entry.y + (isPress ? pressY : 0),
+        scaleX: scaleTargets ? entry.scaleX * scale : entry.scaleX,
+        scaleY: scaleTargets ? entry.scaleY * scale : entry.scaleY,
+        alpha: isPress ? pressAlpha : isHover ? hoverAlpha : entry.alpha,
+        duration,
+        ease: "Sine.easeOut"
+      });
+    });
+  };
+
+  hit.on("pointerover", () => tweenTo("hover"));
+  hit.on("pointerout", () => tweenTo("idle"));
+  hit.on("pointerdown", () => tweenTo("press"));
+  hit.on("pointerup", () => tweenTo("hover"));
+  hit.on("pointerupoutside", () => tweenTo("idle"));
+  return hit;
+}
+
 function backButton(scene, label = "Back", target = "CampusScene") {
   const button = scene.add.container(18, 18).setDepth(90).setScrollFactor(0);
   const bg = scene.add.graphics();
@@ -324,6 +369,7 @@ function backButton(scene, label = "Back", target = "CampusScene") {
     useHandCursor: true
   });
   hit.on("pointerdown", () => scene.scene.start(target));
+  makeTactile(scene, hit, button);
   button.add([bg, arrow, copy, hit]);
   return button;
 }
@@ -733,9 +779,10 @@ MissionScene.prototype.create = function createMissionResponsive() {
   this.drawMiniGame();
 
   const submit = panel(this, left + 24, height - 128, width - 84, 56, 18, 0x26221f);
-  text(this, center, height - 111, "Submit signal", 18, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
+  const submitText = text(this, center, height - 111, "Submit signal", 18, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
   submit.setInteractive(new Phaser.Geom.Rectangle(left + 24, height - 128, width - 84, 56), Phaser.Geom.Rectangle.Contains);
   submit.on("pointerdown", () => this.completeMission());
+  makeTactile(this, submit, [submit, submitText], { scale: false, hoverAlpha: 1, pressAlpha: 0.76, pressY: 0 });
 };
 
 MissionScene.prototype.drawMiniGame = function drawMiniGameResponsive() {
@@ -801,6 +848,7 @@ MissionScene.prototype.drawMiniGame = function drawMiniGameResponsive() {
       outlines.push(outline);
       card.add([bg, stripe, mat, shoe, name, tags, vote, outline]);
       card.setSize(126, 158).setInteractive(new Phaser.Geom.Rectangle(-63, -73, 126, 158), Phaser.Geom.Rectangle.Contains);
+      makeTactile(this, card, card, { hoverScale: 1.045, pressScale: 0.955, pressY: 2 });
       card.on("pointerdown", () => {
         this.selectedDuelChoice = item.id;
         outlines.forEach((entry, outlineIndex) => {
@@ -830,12 +878,14 @@ MissionScene.prototype.drawMiniGame = function drawMiniGameResponsive() {
         tag.strokeRoundedRect(tagX, tagY, 124, 25, 13);
         tagText.setColor("#d77458");
       });
+      makeTactile(this, zone, [tag, tagText], { scale: false, hoverAlpha: 1, pressAlpha: 0.72, pressY: 0 });
     });
     const nextLabel = round < DUEL_PAIRS.length - 1 ? "Lock Bout + Next" : "Lock Final Bout";
     const next = panel(this, left + 34, y + 404, width - 104, 38, 14, 0xd77458);
-    text(this, center, y + 414, nextLabel, 13, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0);
+    const nextText = text(this, center, y + 414, nextLabel, 13, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0);
     next.setInteractive(new Phaser.Geom.Rectangle(left + 34, y + 404, width - 104, 38), Phaser.Geom.Rectangle.Contains);
     next.on("pointerdown", () => this.lockDuelBout());
+    makeTactile(this, next, [next, nextText], { scale: false, hoverAlpha: 1, pressAlpha: 0.76, pressY: 0 });
     return;
   }
 
@@ -906,9 +956,10 @@ class ResultScene extends Phaser.Scene {
     });
 
     const next = panel(this, 48, height - 150, width - 96, 58, 18, 0x26221f);
-    text(this, width / 2, height - 132, "Return to campus", 18, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
+    const nextText = text(this, width / 2, height - 132, "Return to campus", 18, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
     next.setInteractive(new Phaser.Geom.Rectangle(48, height - 150, width - 96, 58), Phaser.Geom.Rectangle.Contains);
     next.on("pointerdown", () => this.scene.start("CampusScene"));
+    makeTactile(this, next, [next, nextText], { scale: false, hoverAlpha: 1, pressAlpha: 0.76, pressY: 0 });
   }
 }
 
@@ -1053,6 +1104,7 @@ StartScene.prototype.create = function createMangaOpening() {
   screenTone(this, 48, startY + 8, width - 96, 42, 0xffffff, 0.13).setDepth(10);
   text(this, width / 2, startY + 18, "Enter VIP Archive", 18, "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(11);
   start.setInteractive(new Phaser.Geom.Rectangle(40, startY, width - 80, 58), Phaser.Geom.Rectangle.Contains);
+  makeTactile(this, start, start, { scale: false, hoverAlpha: 1, pressAlpha: 0.76, pressY: 0 });
   start.on("pointerdown", () => this.scene.start("CampusScene"));
   this.tweens.add({ targets: start, alpha: 0.86, yoyo: true, repeat: -1, duration: 860, ease: "Sine.inOut" });
 };
@@ -1061,9 +1113,11 @@ CampusScene.prototype.create = function create() {
   this.progress = loadProgress();
   this.selectedMission = null;
   this.target = null;
-  this.worldWidth = CAMPUS_WORLD_WIDTH;
   const { width, height } = this.scale;
+  this.worldWidth = Math.max(CAMPUS_WORLD_WIDTH, Math.ceil(width * 1.35));
   this.worldHeight = Math.max(CAMPUS_WORLD_HEIGHT, height + 240);
+  this.maxScrollX = Math.max(0, this.worldWidth - width);
+  this.maxScrollY = Math.max(0, this.worldHeight - height);
   this.topUiHeight = CAMPUS_TOP_UI_HEIGHT;
   this.bottomUiHeight = CAMPUS_BOTTOM_UI_HEIGHT;
   this.dragStart = null;
@@ -1072,7 +1126,7 @@ CampusScene.prototype.create = function create() {
   this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
   this.cameras.main.setScroll(0, 0);
   const params = new URLSearchParams(window.location.search);
-  if (params.get("view") === "right") this.cameras.main.setScroll(this.worldWidth - width, Math.max(0, (this.worldHeight - height) * 0.45));
+  if (params.get("view") === "right") this.cameras.main.setScroll(this.maxScrollX, Math.max(0, this.maxScrollY * 0.45));
 
   this.add.rectangle(this.worldWidth / 2, this.worldHeight / 2, this.worldWidth, this.worldHeight, 0xbfe0a7);
   this.add.image(this.worldWidth / 2, this.worldHeight / 2, "campus").setDisplaySize(this.worldWidth, this.worldHeight).setAlpha(0.96);
@@ -1111,8 +1165,8 @@ CampusScene.prototype.create = function create() {
     const dy = pointer.y - this.dragStart.y;
     if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
     this.isDraggingMap = true;
-    this.cameras.main.scrollX = Phaser.Math.Clamp(this.dragStart.cameraX - dx, 0, this.worldWidth - width);
-    this.cameras.main.scrollY = Phaser.Math.Clamp(this.dragStart.cameraY - dy, 0, this.worldHeight - height);
+    this.cameras.main.scrollX = Phaser.Math.Clamp(this.dragStart.cameraX - dx, 0, this.maxScrollX);
+    this.cameras.main.scrollY = Phaser.Math.Clamp(this.dragStart.cameraY - dy, 0, this.maxScrollY);
   });
 
   this.input.on("pointerup", (pointer, objects) => {
@@ -1131,6 +1185,41 @@ CampusScene.prototype.create = function create() {
   });
 
   this.say("Drag the campus to explore. Tap any mission room and I will walk you there.");
+};
+
+CampusScene.prototype.missionPoint = function missionPoint(mission) {
+  return {
+    x: Math.round((mission.x / CAMPUS_WORLD_WIDTH) * this.worldWidth),
+    y: Math.round((mission.y / CAMPUS_WORLD_HEIGHT) * this.worldHeight)
+  };
+};
+
+CampusScene.prototype.missionHitRect = function missionHitRect(mission) {
+  const point = this.missionPoint(mission);
+  const width = Phaser.Math.Clamp(this.scale.width * 0.42, 176, 250);
+  const height = Phaser.Math.Clamp(this.scale.height * 0.18, 150, 220);
+  return {
+    x: point.x - width / 2,
+    y: point.y - 46,
+    width,
+    height,
+    centerX: point.x,
+    centerY: point.y + Math.min(64, height * 0.38)
+  };
+};
+
+CampusScene.prototype.missionAt = function missionAt(x, y) {
+  return missions.find((mission) => {
+    const rect = this.missionHitRect(mission);
+    return x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height;
+  });
+};
+
+CampusScene.prototype.checkMissionArrival = function checkMissionArrival() {
+  const mission = this.missionAt(this.player.x, this.player.y);
+  if (!mission) return false;
+  this.showPreview(mission);
+  return true;
 };
 
 CampusScene.prototype.isMapTouch = function isMapTouch(pointer) {
@@ -1156,17 +1245,17 @@ CampusScene.prototype.createCampusLighting = function createCampusLighting() {
   const ambience = this.add.graphics().setDepth(4);
   ambience.setBlendMode(Phaser.BlendModes.ADD);
   ambience.fillStyle(0xfff0c7, 0.12);
-  ambience.fillEllipse(132, 218, 260, 150);
+  ambience.fillEllipse(this.worldWidth * 0.17, this.worldHeight * 0.21, 260, 150);
   ambience.fillStyle(0x77a7c7, 0.1);
-  ambience.fillEllipse(418, 226, 300, 170);
+  ambience.fillEllipse(this.worldWidth * 0.55, this.worldHeight * 0.22, 300, 170);
   ambience.fillStyle(0xb99adf, 0.1);
-  ambience.fillEllipse(548, 448, 260, 190);
+  ambience.fillEllipse(this.worldWidth * 0.72, this.worldHeight * 0.43, 260, 190);
   ambience.fillStyle(0x72927d, 0.1);
-  ambience.fillEllipse(214, 674, 280, 180);
+  ambience.fillEllipse(this.worldWidth * 0.28, this.worldHeight * 0.65, 280, 180);
   ambience.fillStyle(0xe5bc58, 0.12);
-  ambience.fillEllipse(642, 834, 270, 190);
+  ambience.fillEllipse(this.worldWidth * 0.84, this.worldHeight * 0.8, 270, 190);
   ambience.fillStyle(0xffffff, 0.12);
-  ambience.fillEllipse(354, 78, 430, 110);
+  ambience.fillEllipse(this.worldWidth * 0.47, this.worldHeight * 0.075, 430, 110);
 
   const shade = this.add.graphics().setDepth(4.2);
   shade.fillStyle(0x26221f, 0.06);
@@ -1267,7 +1356,19 @@ CampusScene.prototype.createControls = function createControls() {
 
 CampusScene.prototype.createMissionPins = function createMissionPins() {
   this.pins = missions.map((mission) => {
-    const container = this.add.container(mission.x, mission.y).setDepth(10);
+    const point = this.missionPoint(mission);
+    const hitRect = this.missionHitRect(mission);
+    const area = this.add.zone(hitRect.x, hitRect.y, hitRect.width, hitRect.height).setOrigin(0, 0).setDepth(9).setInteractive({
+      hitArea: new Phaser.Geom.Rectangle(0, 0, hitRect.width, hitRect.height),
+      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      useHandCursor: true
+    });
+    area.on("pointerdown", (pointer, localX, localY, event) => {
+      event?.stopPropagation();
+      this.goToMission(mission);
+    });
+
+    const container = this.add.container(point.x, point.y).setDepth(10);
     const cast = this.add.ellipse(4, 47, 110, 26, 0x26221f, 0.16);
     const glow = this.add.circle(0, 0, 34, mission.color, 0.16);
     glow.setBlendMode(Phaser.BlendModes.ADD);
@@ -1291,10 +1392,15 @@ CampusScene.prototype.createMissionPins = function createMissionPins() {
     const bangText = text(this, 52, 9, this.progress.completed.includes(mission.id) ? "✓" : "!", 12, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
     container.add([cast, glow, post, marker, labelBg, title, bang, bangText]);
     container.setSize(168, 126).setInteractive(new Phaser.Geom.Rectangle(-84, -28, 168, 132), Phaser.Geom.Rectangle.Contains);
-    container.on("pointerdown", () => this.goToMission(mission));
+    makeTactile(this, area, container, { hoverScale: 1.05, pressScale: 0.95, pressY: 2 });
+    makeTactile(this, container, container, { hoverScale: 1.05, pressScale: 0.95, pressY: 2 });
+    container.on("pointerdown", (pointer, localX, localY, event) => {
+      event?.stopPropagation();
+      this.goToMission(mission);
+    });
     this.tweens.add({ targets: glow, alpha: 0.32, scale: 1.08, yoyo: true, repeat: -1, duration: 900, ease: "Sine.inOut" });
     this.tweens.add({ targets: bang, y: bang.y - 3, yoyo: true, repeat: -1, duration: 700, ease: "Sine.inOut" });
-    return { mission, container };
+    return { mission, container, area };
   });
 };
 
@@ -1367,7 +1473,8 @@ CampusScene.prototype.createRankTotem = function createRankTotem() {
 CampusScene.prototype.createQuest = function createQuest() {
   const mission = nextMission(this.progress);
   this.questText = null;
-  const btn = this.add.container(18, 29).setDepth(34).setScrollFactor(0);
+  const missionButtonY = CAMPUS_TOP_UI_HEIGHT + 26;
+  const btn = this.add.container(26, missionButtonY).setDepth(34).setScrollFactor(0);
   const bg = this.add.graphics();
   bg.fillStyle(0xfff0c7, 1);
   bg.lineStyle(1.6, 0xe5bc58, 0.9);
@@ -1388,8 +1495,8 @@ CampusScene.prototype.createQuest = function createQuest() {
     useHandCursor: true
   });
   btn.add([bg, icon, badge, badgeText, hit]);
-  const fixedHit = this.add.zone(0, 0, 66, CAMPUS_TOP_UI_HEIGHT).setOrigin(0, 0).setScrollFactor(0).setDepth(82).setInteractive({
-    hitArea: new Phaser.Geom.Rectangle(0, 0, 66, CAMPUS_TOP_UI_HEIGHT),
+  const fixedHit = this.add.zone(0, CAMPUS_TOP_UI_HEIGHT, 78, 62).setOrigin(0, 0).setScrollFactor(0).setDepth(82).setInteractive({
+    hitArea: new Phaser.Geom.Rectangle(0, 0, 78, 62),
     hitAreaCallback: Phaser.Geom.Rectangle.Contains,
     useHandCursor: true
   });
@@ -1397,6 +1504,7 @@ CampusScene.prototype.createQuest = function createQuest() {
     event?.stopPropagation();
     this.openMissionChecklist();
   });
+  makeTactile(this, fixedHit, btn, { hoverScale: 1.08, pressScale: 0.92, pressY: 1 });
 };
 
 CampusScene.prototype.createViewportChrome = function createViewportChrome() {
@@ -1447,6 +1555,7 @@ CampusScene.prototype.createMissionChecklist = function createMissionChecklist()
     useHandCursor: true
   });
   closeHit.on("pointerdown", () => this.closeMissionChecklist());
+  makeTactile(this, closeHit, closeText, { hoverScale: 1.12, pressScale: 0.86, pressY: 1 });
 
   const rows = [];
   missions.forEach((mission, index) => {
@@ -1479,6 +1588,7 @@ CampusScene.prototype.createMissionChecklist = function createMissionChecklist()
       hitAreaCallback: Phaser.Geom.Rectangle.Contains,
       useHandCursor: true
     });
+    makeTactile(this, hit, [label, meta, state, mark], { hoverScale: 1.025, pressScale: 0.98, pressY: 1 });
   hit.on("pointerdown", () => {
     this.closeMissionChecklist();
     if (this.entryDock) this.entryDock.setVisible(false);
@@ -1517,8 +1627,6 @@ CampusScene.prototype.createMina = function createMina() {
   speech.fillCircle(this.scale.width - 54, y + 26, 36);
   speech.fillStyle(0x77a7c7, 0.07);
   speech.fillCircle(54, y + 36, 26);
-  speech.fillStyle(0xffffff, 0.52);
-  speech.fillRoundedRect(74, y + 14, this.scale.width - 108, 6, 3);
   this.add.circle(34, y + 25, 15, 0xfffbf2, 1).setStrokeStyle(1.2, 0xd77458, 0.44).setDepth(40);
   this.add.image(34, y + 26, "minaConfident").setDisplaySize(28, 28).setDepth(41);
   this.minaText = text(this, 58, y + 16, "Drag anywhere. Tap a room to enter a mission.", 9.5, "#26221f", {
@@ -1569,12 +1677,18 @@ CampusScene.prototype.createPreview = function createPreview() {
     event?.stopPropagation();
     this.enterMission();
   });
+  makeTactile(this, enterZone, [enterBg, enterText], { scale: false, hoverAlpha: 1, pressAlpha: 0.74, pressY: 0 });
 
   this.preview.add([bg, this.previewTitle, this.previewMeta, this.previewBody, enterBg, enterText, enterZone]);
 };
 
 CampusScene.prototype.hidePreview = function hidePreview() {
   if (this.preview) this.preview.setVisible(false);
+  if (this.arrivalPulse) {
+    this.tweens.killTweensOf(this.arrivalPulse);
+    this.arrivalPulse.destroy();
+    this.arrivalPulse = null;
+  }
 };
 
 CampusScene.prototype.createSelectedMissionDock = function createSelectedMissionDock() {
@@ -1608,6 +1722,7 @@ CampusScene.prototype.createSelectedMissionDock = function createSelectedMission
     event?.stopPropagation();
     this.enterMission();
   });
+  makeTactile(this, hit, [cta, ctaText], { scale: false, hoverAlpha: 1, pressAlpha: 0.76, pressY: 0 });
   this.entryDock.add([bg, this.entryDockTitle, cta, ctaText, hit]);
 };
 
@@ -1670,6 +1785,7 @@ CampusScene.prototype.createLadderView = function createLadderView() {
     useHandCursor: true
   });
   closeZone.on("pointerdown", () => this.hideLadder());
+  makeTactile(this, closeZone, closeText, { hoverScale: 1.12, pressScale: 0.86, pressY: 1 });
 
   const pathTop = y + 154;
   const pathBottom = y + height - 124;
@@ -1792,8 +1908,8 @@ CampusScene.prototype.openLadder = function openLadder() {
   if (this.entryDock) this.entryDock.setVisible(false);
   this.closeMissionChecklist();
   if (this.ladderView) this.ladderView.setVisible(true);
-  const targetScrollX = Phaser.Math.Clamp(this.worldWidth - this.scale.width, 0, this.worldWidth - this.scale.width);
-  const targetScrollY = Phaser.Math.Clamp(this.worldHeight - this.scale.height, 0, this.worldHeight - this.scale.height);
+  const targetScrollX = Phaser.Math.Clamp(this.worldWidth - this.scale.width, 0, this.maxScrollX);
+  const targetScrollY = Phaser.Math.Clamp(this.worldHeight - this.scale.height, 0, this.maxScrollY);
   this.tweens.add({ targets: this.cameras.main, scrollX: targetScrollX, scrollY: targetScrollY, duration: 420, ease: "Sine.easeInOut" });
   this.say("This is your VIP Rank Totem. Complete missions to climb toward Market Oracle.");
 };
@@ -1835,12 +1951,13 @@ CampusScene.prototype.createBottomMenu = function createBottomMenu() {
       activeBg.lineStyle(1.3, 0xe5bc58, 0.82);
       activeBg.strokeRoundedRect(x - 23, this.scale.height - 43, 46, 26, 12);
     }
-    navIcon(this, label, x, this.scale.height - 33, active ? 0xd77458 : 0xfffbf2, 52).setScrollFactor(0);
-    text(this, x, this.scale.height - 20, label, 7.2, active ? "#fff0c7" : "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(53);
+    const icon = navIcon(this, label, x, this.scale.height - 33, active ? 0xd77458 : 0xfffbf2, 52).setScrollFactor(0);
+    const copy = text(this, x, this.scale.height - 20, label, 7.2, active ? "#fff0c7" : "#ffffff", { weight: "900", align: "center" }).setOrigin(0.5, 0).setDepth(53);
     hit.on("pointerdown", (pointer, localX, localY, event) => {
       event?.stopPropagation();
       this.handleBottomMenu(label);
     });
+    makeTactile(this, hit, [icon, copy], { scale: false, hoverAlpha: 1, pressAlpha: 0.68, pressY: 0 });
   });
 };
 
@@ -1876,8 +1993,8 @@ CampusScene.prototype.moveTo = function moveTo(x, y, onComplete) {
   const duration = Phaser.Math.Distance.Between(this.player.x, this.player.y, clampedX, clampedY) * 4.3;
   const safeDuration = Phaser.Math.Clamp(duration, 220, 1200);
   const viewHeight = this.scale.height - this.topUiHeight - this.bottomUiHeight;
-  const targetScrollX = Phaser.Math.Clamp(clampedX - this.scale.width / 2, 0, this.worldWidth - this.scale.width);
-  const targetScrollY = Phaser.Math.Clamp(clampedY - this.topUiHeight - viewHeight / 2, 0, this.worldHeight - this.scale.height);
+  const targetScrollX = Phaser.Math.Clamp(clampedX - this.scale.width / 2, 0, this.maxScrollX);
+  const targetScrollY = Phaser.Math.Clamp(clampedY - this.topUiHeight - viewHeight / 2, 0, this.maxScrollY);
   this.player.setScale(1);
   this.player.setAngle(pose?.angle || 0);
   this.player.setDisplaySize(pose.width, this.playerBaseHeight);
@@ -1898,6 +2015,7 @@ CampusScene.prototype.moveTo = function moveTo(x, y, onComplete) {
       this.player.setAngle(currentPose.angle);
       this.player.setDisplaySize(currentPose.width, this.playerBaseHeight);
       if (onComplete) onComplete();
+      else this.checkMissionArrival();
     }
   });
   this.tweens.add({
@@ -1922,23 +2040,36 @@ CampusScene.prototype.enterMission = function enterMission(mission = this.select
 };
 
 CampusScene.prototype.goToMission = function goToMission(mission) {
-  if (this.selectedMission?.id === mission.id && this.preview?.visible) {
-    this.enterMission(mission);
-    return;
-  }
   this.selectedMission = mission;
-  this.showPreview(mission);
-  if (this.entryDock && this.entryDockTitle) {
-    this.entryDockTitle.setText(`${mission.title} selected`);
-    this.entryDock.setVisible(true);
-  }
-  this.say(`${mission.title} selected. Tap the fixed ENTER button or the larger Enter Mission panel.`);
-  this.moveTo(mission.x, mission.y + 58, () => this.showPreview(mission));
+  this.hidePreview();
+  if (this.entryDock) this.entryDock.setVisible(false);
+  this.hideLadder();
+  this.closeMissionChecklist();
+  const hitRect = this.missionHitRect(mission);
+  this.say(`Walking to ${mission.title}. The Enter Mission button appears when Amira reaches the room.`);
+  this.moveTo(hitRect.centerX, hitRect.centerY, () => this.showPreview(mission));
 };
 
 CampusScene.prototype.showPreview = function showPreview(mission) {
   this.selectedMission = mission;
   this.preview.setVisible(true);
+  if (this.arrivalPulse) {
+    this.tweens.killTweensOf(this.arrivalPulse);
+    this.arrivalPulse.destroy();
+  }
+  const point = this.missionPoint(mission);
+  this.arrivalPulse = this.add.ellipse(point.x, point.y + 50, 138, 42, mission.color, 0.16).setDepth(18);
+  this.arrivalPulse.setStrokeStyle(2.4, 0xfffbf2, 0.72);
+  this.tweens.add({
+    targets: this.arrivalPulse,
+    scaleX: 1.18,
+    scaleY: 1.28,
+    alpha: 0.42,
+    yoyo: true,
+    repeat: -1,
+    duration: 720,
+    ease: "Sine.inOut"
+  });
   if (this.entryDock && this.entryDockTitle) {
     this.entryDockTitle.setText(`${mission.title} selected`);
     this.entryDock.setVisible(true);
@@ -1946,7 +2077,7 @@ CampusScene.prototype.showPreview = function showPreview(mission) {
   this.previewTitle.setText(mission.title);
   this.previewMeta.setText(`${mission.room} | ${mission.time} | +${mission.xp} XP`);
   this.previewBody.setText(mission.prompt);
-  this.say(`This is ${mission.room}. Tap Enter, or tap ${mission.title} again to begin.`);
+  this.say(`This is ${mission.room}. Tap Enter Mission to begin.`);
 };
 
 const config = {
