@@ -121,6 +121,15 @@ const RANK_META = [
   { short: "Oracle", perk: "Top-tier market signal status.", color: 0x26221f, accent: 0xf1eee8 }
 ];
 
+const PERKS = [
+  { short: "Content", full: "Bonus Sunday Staples content" },
+  { short: "Points", full: "Sunday Points" },
+  { short: "GWP", full: "Gift with purchase" },
+  { short: "Vouchers", full: "Gift cards and vouchers" },
+  { short: "Shoes", full: "Free pair of shoes" },
+  { short: "Bag", full: "Free personalised handbag" }
+];
+
 const SHOE_CONCEPTS = Array.from({ length: 8 }, (_, index) => {
   const number = String(index + 1).padStart(2, "0");
   const palette = ["Cream", "Black", "Blush", "Nude", "Sage", "Light Blue", "Oat", "Rose"];
@@ -1142,6 +1151,7 @@ CampusScene.prototype.create = function create() {
   this.createPreview();
   this.createSelectedMissionDock();
   this.createLadderView();
+  this.createPerksView();
   this.createBottomMenu();
   this.createControls();
   this.pinHudToCamera();
@@ -1180,6 +1190,7 @@ CampusScene.prototype.create = function create() {
     this.hidePreview();
     if (this.entryDock) this.entryDock.setVisible(false);
     this.hideLadder();
+    this.hidePerks();
     this.closeMissionChecklist();
     this.say("Drag the campus to explore. Tap a mission room and I will walk you there.");
   });
@@ -1231,7 +1242,7 @@ CampusScene.prototype.isEntryUiTouch = function isEntryUiTouch(pointer) {
   if (pointer.y <= this.topUiHeight || pointer.y >= this.scale.height - 56) return true;
   if (this.entryDock?.visible && inRect(this.entryDockBounds)) return true;
   if (this.preview?.visible && inRect(this.previewBounds)) return true;
-  if (this.missionChecklist?.visible || this.ladderView?.visible) return true;
+  if (this.missionChecklist?.visible || this.ladderView?.visible || this.perksView?.visible) return true;
   return false;
 };
 
@@ -1604,6 +1615,7 @@ CampusScene.prototype.openMissionChecklist = function openMissionChecklist() {
   this.hidePreview();
   if (this.entryDock) this.entryDock.setVisible(false);
   this.hideLadder();
+  this.hidePerks();
   if (this.missionChecklist) this.missionChecklist.setVisible(true);
   this.say("Choose a mission from the list, or close it to return to campus.");
 };
@@ -1919,6 +1931,7 @@ CampusScene.prototype.openLadder = function openLadder() {
   this.hidePreview();
   if (this.entryDock) this.entryDock.setVisible(false);
   this.closeMissionChecklist();
+  this.hidePerks();
   if (this.ladderView) this.ladderView.setVisible(true);
   const targetScrollX = Phaser.Math.Clamp(this.worldWidth - this.scale.width, 0, this.maxScrollX);
   const targetScrollY = Phaser.Math.Clamp(this.worldHeight - this.scale.height, 0, this.maxScrollY);
@@ -1928,6 +1941,159 @@ CampusScene.prototype.openLadder = function openLadder() {
 
 CampusScene.prototype.hideLadder = function hideLadder() {
   if (this.ladderView) this.ladderView.setVisible(false);
+};
+
+CampusScene.prototype.drawPerkMark = function drawPerkMark(x, y, unlocked, depth = 67) {
+  const mark = this.add.graphics().setDepth(depth);
+  mark.fillStyle(unlocked ? 0x72927d : 0xfffbf2, unlocked ? 0.98 : 0.64);
+  mark.lineStyle(1.4, unlocked ? 0xfffbf2 : 0xd77458, unlocked ? 0.82 : 0.62);
+  mark.fillCircle(x, y, 10);
+  mark.strokeCircle(x, y, 10);
+  mark.lineStyle(2.2, unlocked ? 0xffffff : 0xd77458, 0.96);
+  if (unlocked) {
+    mark.lineBetween(x - 5, y, x - 1, y + 4);
+    mark.lineBetween(x - 1, y + 4, x + 6, y - 5);
+  } else {
+    mark.lineBetween(x - 4, y - 4, x + 4, y + 4);
+    mark.lineBetween(x + 4, y - 4, x - 4, y + 4);
+  }
+  return mark;
+};
+
+CampusScene.prototype.createPerksView = function createPerksView() {
+  const width = this.scale.width - 20;
+  const height = Math.min(650, this.scale.height - 116);
+  const x = 10;
+  const y = 70;
+  const currentIndex = getTierIndex(this.progress.xp);
+  const currentTier = tiers[currentIndex];
+  this.perksView = this.add.container(0, 0).setDepth(66).setScrollFactor(0).setVisible(false);
+
+  const shade = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x171412, 0.5).setOrigin(0, 0);
+  shade.setInteractive(new Phaser.Geom.Rectangle(0, 0, this.scale.width, this.scale.height), Phaser.Geom.Rectangle.Contains);
+  const bg = this.add.graphics();
+  bg.fillStyle(0xfffbf2, 0.98);
+  bg.lineStyle(2.6, 0x26221f, 0.72);
+  bg.fillRoundedRect(x, y, width, height, 24);
+  bg.strokeRoundedRect(x, y, width, height, 24);
+  bg.fillStyle(0x26221f, 0.96);
+  bg.fillRoundedRect(x + 10, y + 10, width - 20, 86, 22);
+  bg.fillStyle(0xe5bc58, 0.14);
+  bg.fillCircle(x + width - 74, y + 46, 68);
+  bg.fillStyle(0xd77458, 0.13);
+  bg.fillCircle(x + 44, y + 72, 46);
+  bg.lineStyle(1, 0xffffff, 0.28);
+  bg.lineBetween(x + 26, y + 22, x + width - 26, y + 22);
+  const tone = screenTone(this, x + 20, y + 18, width - 40, 70, 0xffffff, 0.045);
+
+  const title = text(this, x + 26, y + 25, "VIP Perks Ladder", 22, "#ffffff", { weight: "900" });
+  const sub = text(this, x + 26, y + 56, `${currentTier.name} | ${this.progress.xp} XP`, 10.5, "#fff0c7", {
+    weight: "900",
+    wordWrap: { width: width - 108 }
+  });
+  const closeBg = this.add.graphics();
+  closeBg.fillStyle(0xfffbf2, 0.18);
+  closeBg.lineStyle(1.4, 0xfffbf2, 0.5);
+  closeBg.fillRoundedRect(x + width - 44, y + 20, 28, 28, 9);
+  closeBg.strokeRoundedRect(x + width - 44, y + 20, 28, 28, 9);
+  const closeText = text(this, x + width - 30, y + 25, "X", 11, "#ffffff", { weight: "900" }).setOrigin(0.5, 0);
+  const closeZone = this.add.zone(x + width - 54, y + 16, 44, 44).setOrigin(0, 0).setInteractive({
+    hitArea: new Phaser.Geom.Rectangle(0, 0, 44, 44),
+    hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+    useHandCursor: true
+  });
+  closeZone.on("pointerdown", () => this.hidePerks());
+  makeTactile(this, closeZone, closeText, { hoverScale: 1.12, pressScale: 0.86, pressY: 1 });
+
+  const tableX = x + 14;
+  const tableY = y + 116;
+  const tableW = width - 28;
+  const rankW = Math.max(104, Math.min(132, tableW * 0.34));
+  const perkW = (tableW - rankW) / PERKS.length;
+  const rowH = Math.max(34, Math.min(46, (height - 238) / tiers.length));
+  const headerH = 46;
+  const table = this.add.graphics();
+  table.fillStyle(0xffffff, 0.88);
+  table.lineStyle(1.4, 0x26221f, 0.16);
+  table.fillRoundedRect(tableX, tableY, tableW, headerH + rowH * tiers.length, 18);
+  table.strokeRoundedRect(tableX, tableY, tableW, headerH + rowH * tiers.length, 18);
+  table.fillStyle(0xfff0c7, 0.9);
+  table.fillRoundedRect(tableX + 4, tableY + 4, tableW - 8, headerH - 8, 14);
+  table.lineStyle(1, 0x26221f, 0.12);
+  table.lineBetween(tableX + rankW, tableY + 10, tableX + rankW, tableY + headerH + rowH * tiers.length - 10);
+  for (let i = 1; i <= PERKS.length; i += 1) {
+    const cx = tableX + rankW + perkW * i;
+    table.lineBetween(cx, tableY + 12, cx, tableY + headerH + rowH * tiers.length - 12);
+  }
+
+  const tableItems = [table];
+  const rankHeader = text(this, tableX + 12, tableY + 16, "Rank", 10, "#26221f", { weight: "900" });
+  tableItems.push(rankHeader);
+  PERKS.forEach((perk, index) => {
+    const px = tableX + rankW + perkW * index + perkW / 2;
+    const label = text(this, px, tableY + 11, perk.short, perk.short.length > 6 ? 6.6 : 7.4, "#26221f", {
+      weight: "900",
+      align: "center",
+      wordWrap: { width: perkW - 2 }
+    }).setOrigin(0.5, 0);
+    tableItems.push(label);
+  });
+
+  tiers.forEach((tier, tierIndex) => {
+    const rowY = tableY + headerH + rowH * tierIndex;
+    const active = tierIndex === currentIndex;
+    const reached = tierIndex <= currentIndex;
+    const row = this.add.graphics();
+    row.fillStyle(active ? 0xfff0c7 : reached ? 0xeef6ef : 0xffffff, active ? 0.78 : 0.68);
+    row.fillRoundedRect(tableX + 5, rowY + 4, tableW - 10, rowH - 8, 12);
+    if (active) {
+      row.lineStyle(1.6, 0xe5bc58, 0.9);
+      row.strokeRoundedRect(tableX + 5, rowY + 4, tableW - 10, rowH - 8, 12);
+    }
+    const rankName = text(this, tableX + 12, rowY + 8, tier.name, tier.name.length > 22 ? 7.2 : 8.2, active ? "#26221f" : "#453f39", {
+      weight: "900",
+      wordWrap: { width: rankW - 18 }
+    });
+    const xp = text(this, tableX + 12, rowY + rowH - 16, `${tier.xp} XP`, 6.6, active ? "#d77458" : "#756b62", { weight: "900" });
+    tableItems.push(row, rankName, xp);
+    PERKS.forEach((perk, perkIndex) => {
+      const cx = tableX + rankW + perkW * perkIndex + perkW / 2;
+      const cy = rowY + rowH / 2;
+      tableItems.push(this.drawPerkMark(cx, cy, perkIndex <= tierIndex));
+    });
+  });
+
+  const footer = this.add.graphics();
+  const footerY = y + height - 72;
+  footer.fillStyle(0x26221f, 0.94);
+  footer.lineStyle(1.4, 0xe5bc58, 0.68);
+  footer.fillRoundedRect(x + 18, footerY, width - 36, 52, 17);
+  footer.strokeRoundedRect(x + 18, footerY, width - 36, 52, 17);
+  const nextPerk = PERKS[Math.min(currentIndex + 1, PERKS.length - 1)];
+  const nextTier = tiers[Math.min(currentIndex + 1, tiers.length - 1)];
+  const footerCopy = currentIndex >= tiers.length - 1
+    ? "Top tier unlocked: personalised handbag reward eligibility."
+    : `${nextTier.xp - this.progress.xp} XP to unlock ${nextPerk.full}.`;
+  const footerText = text(this, x + 34, footerY + 13, footerCopy, 11, "#ffffff", {
+    weight: "900",
+    wordWrap: { width: width - 68 }
+  });
+
+  this.perksView.add([shade, bg, tone, title, sub, closeBg, closeText, closeZone, ...tableItems, footer, footerText]);
+};
+
+CampusScene.prototype.openPerks = function openPerks() {
+  this.hidePreview();
+  if (this.entryDock) this.entryDock.setVisible(false);
+  if (this.safeEnterHit) this.safeEnterHit.setVisible(false);
+  this.hideLadder();
+  this.closeMissionChecklist();
+  if (this.perksView) this.perksView.setVisible(true);
+  this.say("Each rank unlocks a stronger VIP perk. Climb with missions to move right across the table.");
+};
+
+CampusScene.prototype.hidePerks = function hidePerks() {
+  if (this.perksView) this.perksView.setVisible(false);
 };
 
 CampusScene.prototype.createBottomMenu = function createBottomMenu() {
@@ -1976,14 +2142,14 @@ CampusScene.prototype.createBottomMenu = function createBottomMenu() {
 CampusScene.prototype.handleBottomMenu = function handleBottomMenu(label) {
   if (label !== "Ladder") this.hideLadder();
   if (label !== "Missions") this.closeMissionChecklist();
+  if (label !== "Perks") this.hidePerks();
   if (label === "Guide") {
     this.hidePreview();
     this.say("Drag the campus, tap a room, then use the large Enter Mission button.");
   }
   if (label === "Ladder") this.openLadder();
   if (label === "Perks") {
-    this.hidePreview();
-    this.say("Perks unlock through EXP: gift cards, vouchers, founder content, and lucky draws.");
+    this.openPerks();
   }
   if (label === "Profile") {
     this.hidePreview();
